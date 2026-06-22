@@ -1123,11 +1123,26 @@
                         <h3 id="payInstructionTitle">Deposit</h3>
                     </div>
                     <div class="field-group">
-                        <label class="field-label" for="payAmountInput">Nominal</label>
+                        <label class="field-label" for="payAmountInput">Nominal (min Rp10.000)</label>
                         <div class="amount-input-wrap"><span>Rp</span><input type="text" inputmode="numeric" id="payAmountInput" placeholder="0"></div>
                         <div class="field-error" id="payAmountError">Masukkan nominal minimal Rp 10.000</div>
                     </div>
-                    <button class="confirm-btn" id="payConfirmBtn" disabled>Saya Sudah Bayar</button>
+                    <!-- Area QRIS / xRocket — muncul setelah generate -->
+                    <div id="payResultArea" style="display:none; text-align:center; padding: 8px 0 12px;">
+                        <div id="payQrisBox" style="display:none;">
+                            <p style="font-size:13px; color:var(--text-secondary); margin-bottom:10px;">Scan QRIS ini di aplikasi bank kamu</p>
+                            <img id="payQrisImage" src="" alt="QRIS" style="width:200px; height:200px; border-radius:var(--radius-md); border:1px solid var(--divider);">
+                            <p style="font-size:12px; color:var(--danger); margin-top:8px;">⏳ Berlaku 10 menit</p>
+                        </div>
+                        <div id="payXrocketBox" style="display:none;">
+                            <p style="font-size:13px; color:var(--text-secondary); margin-bottom:10px;">Bayar lewat xRocket</p>
+                            <p id="payXrocketAmount" style="font-size:18px; font-weight:700; color:var(--accent);"></p>
+                            <a id="payXrocketLink" href="#" target="_blank" class="confirm-btn" style="display:block; margin-top:12px; text-decoration:none;">🚀 Buka xRocket</a>
+                        </div>
+                        <p style="font-size:12px; color:var(--text-secondary); margin-top:12px;">Saldo otomatis bertambah setelah pembayaran berhasil.</p>
+                    </div>
+                    <button class="confirm-btn" id="payConfirmBtn" disabled>Generate Pembayaran</button>
+                    <div id="payLoadingText" style="display:none; text-align:center; font-size:13px; color:var(--text-secondary); margin-top:10px;">⏳ Sedang generate pembayaran...</div>
                 </div>
             </div>
         </div>
@@ -2461,13 +2476,116 @@
         document.getElementById('withdrawBtn').addEventListener('click', () => document.getElementById('withdrawModal').classList.add('active'));
         document.getElementById('openReferralModal').addEventListener('click', () => document.getElementById('referralModal').classList.add('active'));
 
-        // Modal Option Click untuk dompet (Demo)
-        document.querySelectorAll('.option-card[data-action]').forEach(card => {
+        // Buka dompet
+        document.getElementById('depositBtn').addEventListener('click', () => document.getElementById('depositModal').classList.add('active'));
+        document.getElementById('withdrawBtn').addEventListener('click', () => document.getElementById('withdrawModal').classList.add('active'));
+        document.getElementById('openReferralModal').addEventListener('click', () => document.getElementById('referralModal').classList.add('active'));
+
+        // ===== PAYMENT — Deposit via QRIS (Duitku) / xRocket =====
+        let currentPayMethod = null;
+
+        // Input nominal
+        document.getElementById('payAmountInput').addEventListener('input', (e) => {
+            const digits = e.target.value.replace(/\D/g, '');
+            e.target.value = digits ? Number(digits).toLocaleString('id-ID') : '';
+            const amount = digits ? parseInt(digits) : 0;
+            const errEl = document.getElementById('payAmountError');
+            const btnEl = document.getElementById('payConfirmBtn');
+            errEl.classList.toggle('show', digits.length > 0 && amount < 10000);
+            btnEl.disabled = amount < 10000;
+        });
+
+        // Pilih metode deposit → simpan method, buka modal nominal
+        document.querySelectorAll('.option-card[data-action="deposit"]').forEach(card => {
             card.addEventListener('click', () => {
+                currentPayMethod = card.dataset.method === 'qris_seabank' ? 'qris' : 'xrocket';
                 document.getElementById('depositModal').classList.remove('active');
-                document.getElementById('withdrawModal').classList.remove('active');
+                document.getElementById('payInstructionTitle').textContent =
+                    currentPayMethod === 'qris' ? 'Deposit via QRIS' : 'Deposit via xRocket';
+                // Reset area hasil sebelumnya
+                document.getElementById('payResultArea').style.display = 'none';
+                document.getElementById('payQrisBox').style.display = 'none';
+                document.getElementById('payXrocketBox').style.display = 'none';
+                document.getElementById('payAmountInput').value = '';
+                document.getElementById('payConfirmBtn').disabled = true;
+                document.getElementById('payConfirmBtn').textContent = 'Generate Pembayaran';
                 document.getElementById('payInstructionModal').classList.add('active');
             });
+        });
+
+        // Withdraw — masih simulasi, belum ada disbursement API
+        document.querySelectorAll('.option-card[data-action="withdraw"]').forEach(card => {
+            card.addEventListener('click', () => {
+                document.getElementById('withdrawModal').classList.remove('active');
+                alert('Fitur withdraw segera hadir! Hubungi @satpamharaheta untuk withdraw manual sementara ini.');
+            });
+        });
+
+        // Klik "Generate Pembayaran"
+        document.getElementById('payConfirmBtn').addEventListener('click', async () => {
+            const digits = document.getElementById('payAmountInput').value.replace(/\D/g, '');
+            const amount = parseInt(digits);
+            if (!amount || amount < 10000) return;
+            if (!CURRENT_USER?.telegram_id) {
+                alert('Gagal: data user tidak ditemukan. Buka mini app dari Telegram ya.');
+                return;
+            }
+
+            const btn = document.getElementById('payConfirmBtn');
+            const loading = document.getElementById('payLoadingText');
+            btn.disabled = true;
+            btn.style.display = 'none';
+            loading.style.display = 'block';
+
+            try {
+                const res = await fetch('/api/payment/create', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-internal-key': INTERNAL_KEY
+                    },
+                    body: JSON.stringify({
+                        method: currentPayMethod,
+                        amount,
+                        telegram_id: CURRENT_USER.telegram_id
+                    })
+                });
+                const data = await res.json();
+
+                loading.style.display = 'none';
+                document.getElementById('payResultArea').style.display = 'block';
+
+                if (currentPayMethod === 'qris') {
+                    document.getElementById('payQrisBox').style.display = 'block';
+                    // Duitku bisa return qr_string (raw) atau qr_url (gambar langsung)
+                    const img = document.getElementById('payQrisImage');
+                    if (data.qr_url) {
+                        img.src = data.qr_url;
+                    } else if (data.qr_string) {
+                        // Generate QR dari string menggunakan Google Chart API
+                        img.src = `https://chart.googleapis.com/chart?cht=qr&chs=300x300&chl=${encodeURIComponent(data.qr_string)}`;
+                    }
+                } else {
+                    document.getElementById('payXrocketBox').style.display = 'block';
+                    document.getElementById('payXrocketAmount').textContent = `${data.usdt_amount} USDT`;
+                    const link = document.getElementById('payXrocketLink');
+                    link.href = data.invoice_url;
+                    // Di dalam Telegram WebApp, buka link lewat tg.openLink
+                    link.addEventListener('click', (e) => {
+                        if (tg) {
+                            e.preventDefault();
+                            tg.openLink(data.invoice_url);
+                        }
+                    }, { once: true });
+                }
+
+            } catch (err) {
+                loading.style.display = 'none';
+                btn.style.display = 'block';
+                btn.disabled = false;
+                alert(`Gagal generate pembayaran: ${err.message}`);
+                console.error('payment create error:', err);
+            }
         });
     </script>
 </body>
