@@ -1,0 +1,2404 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Haraheta Freelance</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        :root {
+            /* ===== PALET WARNA ===== */
+            --primary: #0f172a;       
+            --secondary: #3b82f6;     
+            --accent-tosca: #0d9488;  
+            --bg: #f8fafc;            
+            --surface: #ffffff;       
+            --text-primary: #1e293b;  
+            --text-secondary: #64748b;
+            --success: #10b981;       
+            --warning: #f59e0b;       
+            --danger: #ef4444;        
+
+            --secondary-soft: #eff6ff; 
+            --tosca-soft: #ccfbf1;
+            --warning-soft: #fef3c7;
+
+            --accent: var(--secondary);
+            --accent-soft: var(--secondary-soft);
+            --accent-gradient: linear-gradient(135deg, #60a5fa, #3b82f6); 
+            
+            --divider: #e2e8f0;
+            --shadow-card: 0 8px 24px rgba(15, 23, 42, 0.06), 0 2px 6px rgba(15, 23, 42, 0.04);
+            --shadow-nav: 0 -4px 12px rgba(15, 23, 42, 0.04);
+            
+            --radius-2xl: 24px;
+            --radius-xl: 18px;
+            --radius-lg: 14px;
+            --radius-md: 10px;
+            --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: var(--font);
+            background: var(--bg);
+            color: var(--text-primary);
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+            padding-bottom: 80px;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 430px;
+            background: var(--bg);
+            min-height: 100vh;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 0 60px rgba(0,0,0,0.04);
+        }
+
+        .topbar {
+            background: rgba(255,255,255,0.85);
+            backdrop-filter: blur(10px);
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--divider);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .topbar h1 {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--primary);
+            letter-spacing: -0.5px;
+        }
+        .icon-btn {
+            background: var(--accent-soft);
+            border: none;
+            font-size: 20px;
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .icon-btn:active { transform: scale(0.92); }
+
+        .page {
+            display: none;
+            flex: 1;
+            padding: 18px;
+            flex-direction: column;
+            gap: 18px;
+            animation: fadeSlide 0.3s ease;
+            overflow-y: auto;
+        }
+        .page.active { display: flex; }
+
+        @keyframes fadeSlide {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ===== LAYOUT JOBS ===== */
+        .jobs-layout {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            width: 100%;
+            transition: all var(--transition);
+        }
+        
+        .tab-sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            width: 100%;
+            transition: width var(--transition);
+        }
+
+        .tab-btn {
+            display: flex;
+            align-items: center;
+            background: var(--surface);
+            border: 1px solid var(--divider);
+            padding: 16px;
+            border-radius: var(--radius-xl);
+            cursor: pointer;
+            color: var(--text-secondary);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+            transition: all var(--transition);
+            overflow: hidden;
+            white-space: nowrap;
+        }
+        
+        .tab-btn.active { 
+            background: var(--secondary-soft); 
+            color: var(--accent); 
+            border-color: var(--accent); 
+            box-shadow: 0 4px 12px rgba(59,130,246,0.15); 
+        }
+
+        .tab-icon {
+            font-size: 22px;
+            min-width: 28px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .tab-text {
+            font-size: 16px;
+            font-weight: 600;
+            margin-left: 12px;
+            opacity: 1;
+            max-width: 200px;
+            transition: max-width var(--transition), opacity 0.2s, margin var(--transition);
+        }
+
+        .jobs-content {
+            display: none;
+            flex: 1;
+            animation: fadeSlide 0.4s ease;
+        }
+
+        .jobs-layout.sidebar-mode {
+            flex-direction: row;
+            align-items: flex-start;
+        }
+        .jobs-layout.sidebar-mode .tab-sidebar {
+            width: 64px;
+            flex-shrink: 0;
+            position: sticky;
+            top: 0;
+        }
+        .jobs-layout.sidebar-mode .tab-btn {
+            padding: 14px 0;
+            justify-content: center;
+            border-radius: 16px;
+        }
+        .jobs-layout.sidebar-mode .tab-text {
+            max-width: 0;
+            opacity: 0;
+            margin-left: 0;
+        }
+        .jobs-layout.sidebar-mode .jobs-content {
+            display: block;
+            min-width: 0;
+        }
+
+        /* Toast Popup */
+        .job-toast {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.9);
+            width: calc(100% - 40px);
+            max-width: 390px;
+            background: var(--surface);
+            border: 2px solid var(--accent);
+            padding: 20px;
+            border-radius: var(--radius-xl);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 14px;
+            box-shadow: 0 16px 40px rgba(15, 23, 42, 0.15);
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.15s ease;
+            z-index: 9999;
+            color: var(--accent);
+            font-weight: 700;
+        }
+        .job-toast.show {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        /* Kartu Tugas */
+        .task-card {
+            background: var(--surface); border-radius: var(--radius-xl); padding: 18px;
+            box-shadow: var(--shadow-card); border: 1px solid rgba(0,0,0,0.03);
+            margin-bottom: 12px;
+        }
+        .task-card:active { transform: scale(0.98); }
+        .task-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .task-type {
+            font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 20px;
+            background: var(--accent-soft); color: var(--accent);
+        }
+        .task-price { font-weight: 700; font-size: 20px; color: var(--accent); }
+        .task-title { font-weight: 600; font-size: 16px; margin-bottom: 10px; color: var(--text-primary); }
+        .task-detail { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+        .task-detail span {
+            background: #f1f5f9; padding: 5px 10px; border-radius: 8px; font-size: 13px;
+            color: var(--text-secondary); display: flex; align-items: center; gap: 5px;
+        }
+        .task-footer { display: flex; justify-content: space-between; align-items: center; }
+        .client-rating { font-size: 13px; color: var(--text-secondary); }
+        
+        .btn-ambil {
+            background: var(--accent-gradient); color: white; border: none; padding: 10px 24px;
+            border-radius: 30px; font-weight: 600; font-size: 14px; cursor: pointer;
+            box-shadow: 0 4px 12px rgba(59,130,246,0.3); transition: all 0.2s;
+        }
+        .btn-ambil:active { transform: scale(0.95); }
+        
+        .btn-full { width: 100%; text-align: center; margin-top: 10px; padding: 12px; }
+
+        /* ===== MENU BAWAH (5 ITEM) ===== */
+        .bottom-nav {
+            position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+            width: 100%; max-width: 430px; background: rgba(255,255,255,0.9);
+            backdrop-filter: blur(12px); display: flex; justify-content: space-between;
+            align-items: center; height: 70px; border-top: 1px solid rgba(0,0,0,0.04);
+            box-shadow: var(--shadow-nav); padding: 0 10px env(safe-area-inset-bottom, 8px); z-index: 20;
+        }
+        .nav-item {
+            display: flex; flex-direction: column; align-items: center; gap: 4px;
+            font-size: 10px; font-weight: 500; color: var(--text-secondary); cursor: pointer;
+            padding: 6px; flex: 1; border-radius: 30px; transition: all 0.2s; position: relative;
+        }
+        .nav-item.active { color: var(--accent); font-weight: 600; }
+        .nav-item.active::after {
+            content: ''; position: absolute; bottom: -8px; width: 4px; height: 4px;
+            background: var(--accent); border-radius: 50%;
+        }
+        .nav-icon { font-size: 22px; }
+
+        /* Umum - Judul Halaman */
+        .page-title { font-size: 20px; font-weight: 700; color: var(--primary); margin-bottom: 8px; }
+        .page-subtitle { font-size: 13px; color: var(--text-secondary); margin-bottom: 16px; }
+
+        /* Profile Specific */
+        .profile-header { display: flex; flex-direction: column; align-items: center; gap: 12px; margin-bottom: 6px; }
+        .avatar-large {
+            width: 80px; height: 80px; background: var(--accent-gradient); border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; font-size: 36px;
+            color: white; font-weight: 700; box-shadow: 0 8px 20px rgba(59,130,246,0.3);
+        }
+        .profile-name { font-size: 20px; font-weight: 700; color: var(--text-primary); }
+        .profile-username { font-size: 14px; color: var(--text-secondary); }
+        .profile-id {
+            font-size: 12px; color: var(--text-secondary); background: #f1f5f9;
+            padding: 4px 10px; border-radius: 20px; display: flex; align-items: center; gap: 6px;
+        }
+        .badge-row { display: flex; gap: 6px; }
+        .badge {
+            font-size: 11px; font-weight: 600; padding: 4px 12px; border-radius: 20px;
+            background: var(--accent-soft); color: var(--accent);
+        }
+        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .stat-card {
+            background: var(--surface); border-radius: var(--radius-lg); padding: 14px;
+            box-shadow: var(--shadow-card); text-align: center;
+        }
+        .stat-value { font-size: 22px; font-weight: 700; color: var(--accent); }
+        .stat-label { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
+        
+        .referral-menu {
+            background: var(--surface); border-radius: var(--radius-xl); padding: 16px;
+            box-shadow: var(--shadow-card); display: flex; justify-content: space-between;
+            align-items: center; cursor: pointer;
+        }
+        .referral-menu:active { background: #f8fafc; }
+
+        /* ===== MODAL STYLES ===== */
+        .modal-overlay {
+            display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(15,23,42,0.4); backdrop-filter: blur(4px); z-index: 100;
+            align-items: flex-end; justify-content: center;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-sheet {
+            background: var(--surface); width: 100%; max-width: 430px;
+            border-radius: var(--radius-2xl) var(--radius-2xl) 0 0; padding: 24px 20px 40px;
+            box-shadow: 0 -10px 30px rgba(15,23,42,0.1); animation: slideUp 0.3s ease;
+            max-height: 88vh; overflow-y: auto;
+        }
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+        .modal-sheet h3 { font-size: 18px; margin-bottom: 20px; font-weight: 600; color: var(--primary); }
+
+        .option-card {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 16px; border: 1px solid var(--divider); border-radius: var(--radius-lg);
+            margin-bottom: 12px; cursor: pointer; background: #ffffff;
+            transition: all 0.2s;
+        }
+        .option-card:active { background: var(--accent-soft); border-color: var(--accent); }
+        .option-left { display: flex; align-items: center; gap: 12px; }
+        .option-icon {
+            width: 48px; height: 48px; border-radius: 12px;
+            background: #f1f5f9; display: flex; align-items: center; justify-content: center; font-size: 24px;
+        }
+        .option-text { font-weight: 500; color: var(--text-primary); }
+        .option-text small { display: block; font-size: 12px; color: var(--text-secondary); margin-top: 4px; font-weight: 400; }
+        
+        .cancel-btn {
+            width: 100%; margin-top: 8px; padding: 12px; background: transparent;
+            border: 1px solid var(--divider); border-radius: var(--radius-md); font-weight: 600;
+            cursor: pointer; font-size: 15px; color: var(--text-primary);
+        }
+
+        /* Wallet Specific */
+        .balance-card {
+            background: var(--surface); border-radius: var(--radius-2xl); padding: 24px;
+            box-shadow: var(--shadow-card); text-align: center;
+        }
+        .balance-label { font-size: 14px; color: var(--text-secondary); margin-bottom: 8px; }
+        .balance-amount { font-size: 36px; font-weight: 700; color: var(--primary); }
+        .balance-idr { font-size: 14px; color: var(--text-secondary); margin-top: 4px; }
+        .action-row { display: flex; gap: 12px; margin-top: 16px; }
+        .btn-action {
+            flex: 1; padding: 12px; border-radius: var(--radius-md); font-weight: 600;
+            font-size: 15px; cursor: pointer; border: none; text-align: center; transition: all 0.2s;
+        }
+        .btn-deposit { background: var(--accent-gradient); color: white; box-shadow: 0 4px 12px rgba(59,130,246,0.3); }
+        .btn-withdraw { background: white; border: 1px solid var(--accent); color: var(--accent); }
+        .btn-action:active { transform: scale(0.95); }
+        
+        .section-title { font-weight: 600; font-size: 16px; margin-bottom: 8px; color: var(--primary); }
+        .tx-list { display: flex; flex-direction: column; gap: 10px; }
+        .tx-item {
+            background: var(--surface); border-radius: var(--radius-md); padding: 12px;
+            display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+        }
+        .tx-info { display: flex; flex-direction: column; }
+        .tx-title { font-weight: 500; font-size: 14px; color: var(--text-primary); }
+        .tx-date { font-size: 12px; color: var(--text-secondary); }
+        .tx-amount { font-weight: 600; font-size: 14px; }
+        .tx-amount.plus { color: var(--success); } 
+        .tx-amount.minus { color: var(--danger); } 
+
+        /* Form Inputs (Digunakan di Deploy & Submit) */
+        .field-group { margin-bottom: 16px; }
+        .field-label { display: block; font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 8px; }
+        .amount-input-wrap {
+            display: flex; align-items: center; border: 1px solid var(--divider);
+            border-radius: var(--radius-md); padding: 0 14px; background: white;
+        }
+        .amount-input-wrap span { color: var(--text-secondary); font-weight: 600; font-size: 15px; }
+        .amount-input-wrap input {
+            border: none; outline: none; flex: 1; padding: 13px 8px; font-size: 16px;
+            font-weight: 600; font-family: var(--font); color: var(--text-primary); background: transparent; min-width: 0;
+        }
+        .textarea-input {
+            width: 100%; border: 1px solid var(--divider); border-radius: var(--radius-md);
+            padding: 12px 14px; font-size: 14px; font-family: var(--font); resize: none;
+            min-height: 70px; outline: none; color: var(--text-primary);
+        }
+        .textarea-input:focus { border-color: var(--accent); }
+        
+        .confirm-btn {
+            width: 100%; padding: 14px; border-radius: var(--radius-md); border: none;
+            background: var(--accent-gradient); color: white; font-weight: 700; font-size: 15px;
+            cursor: pointer; box-shadow: 0 4px 12px rgba(59,130,246,0.3); margin-top: 4px;
+        }
+        .confirm-btn:active { transform: scale(0.97); }
+        .confirm-btn:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; transform: none; }
+
+        /* ===== UI DEPLOY TASK ===== */
+        .job-type-select { display: flex; gap: 8px; margin-bottom: 16px; overflow-x: auto; white-space: nowrap; padding-bottom: 4px;}
+        .job-type-select::-webkit-scrollbar { display: none; }
+        .job-type-btn {
+            flex: 1 0 auto; padding: 12px 16px; border-radius: var(--radius-md); border: 1px solid var(--divider);
+            background: white; font-size: 13px; font-weight: 600; cursor: pointer; color: var(--text-secondary); text-align: center;
+        }
+        .job-type-btn.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+        
+        .quick-amounts { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+        .quick-amount-btn {
+            padding: 7px 14px; border-radius: 20px; border: 1px solid var(--divider);
+            background: white; font-size: 12px; font-weight: 600; cursor: pointer; color: var(--text-secondary);
+        }
+        .quick-amount-btn.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+        
+        .escrow-note {
+            display: flex; gap: 8px; background: var(--warning-soft); border: 1px solid var(--warning);
+            border-radius: var(--radius-md); padding: 10px 12px; font-size: 12px; color: #b45309; 
+            margin-bottom: 16px; align-items: flex-start;
+        }
+        .fee-breakdown {
+            background: var(--bg); border-radius: var(--radius-md); padding: 12px 14px;
+            margin-bottom: 16px; display: flex; flex-direction: column; gap: 6px;
+        }
+        .fee-row { display: flex; justify-content: space-between; font-size: 13px; color: var(--text-primary); }
+        .fee-row span:first-child { color: var(--text-secondary); }
+        .fee-row.total { border-top: 1px solid var(--divider); padding-top: 6px; margin-top: 2px; font-weight: 700; }
+
+        /* ===== PANEL ORDER MEMBER (DEPLOY) ===== */
+        .target-select { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+        .target-btn {
+            display: flex; flex-direction: column; align-items: center; gap: 5px;
+            padding: 14px 6px; border-radius: var(--radius-md); border: 1px solid var(--divider);
+            background: white; cursor: pointer; transition: all 0.2s;
+        }
+        .target-icon { font-size: 20px; }
+        .target-label { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
+        .target-btn.active { background: var(--accent-soft); border-color: var(--accent); }
+        .target-btn.active .target-label { color: var(--accent); }
+
+        .price-tier-note {
+            font-size: 12px; color: var(--text-secondary); background: var(--bg);
+            border: 1px dashed var(--divider); border-radius: var(--radius-md);
+            padding: 10px 12px; margin-bottom: 16px; line-height: 1.5;
+        }
+        .price-tier-note strong { color: var(--accent); }
+
+        .member-estimate-box {
+            background: var(--secondary-soft); border-radius: var(--radius-md);
+            padding: 12px 14px; margin-bottom: 16px; display: flex; flex-direction: column; gap: 6px;
+        }
+        .estimate-row { display: flex; justify-content: space-between; font-size: 13px; color: var(--text-primary); }
+        .estimate-row span:first-child { color: var(--text-secondary); }
+        .estimate-row.highlight { font-weight: 700; font-size: 15px; color: var(--accent); }
+
+        .antidup-card {
+            background: var(--surface); border: 1px solid var(--divider); border-radius: var(--radius-lg);
+            padding: 14px 16px; margin-bottom: 16px; transition: all 0.2s;
+        }
+        .antidup-card.is-active { border-color: var(--success); background: #f0fdf4; }
+        .antidup-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+        .antidup-title { font-weight: 600; font-size: 14px; color: var(--text-primary); }
+        .antidup-desc { font-size: 12px; color: var(--text-secondary); line-height: 1.5; margin: 0; }
+        .antidup-status { font-size: 12px; color: var(--success); font-weight: 600; line-height: 1.5; }
+
+        .switch { position: relative; display: inline-block; width: 44px; height: 24px; flex-shrink: 0; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .switch .slider {
+            position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #cbd5e1; transition: 0.2s; border-radius: 24px;
+        }
+        .switch .slider:before {
+            position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px;
+            background-color: white; transition: 0.2s; border-radius: 50%;
+        }
+        .switch input:checked + .slider { background-color: var(--accent); }
+        .switch input:checked + .slider:before { transform: translateX(20px); }
+        .switch input:disabled + .slider { cursor: not-allowed; opacity: 0.85; }
+
+        .field-error { display: none; font-size: 12px; color: var(--danger); margin-top: 6px; }
+        .field-error.show { display: block; }
+
+        /* ===== PANEL ORDER REFERRAL (DEPLOY) ===== */
+        .ref-tier-select { display: flex; flex-direction: column; gap: 10px; }
+        .ref-tier-btn {
+            display: flex; align-items: flex-start; gap: 12px; text-align: left;
+            padding: 14px; border-radius: var(--radius-lg); border: 1px solid var(--divider);
+            background: white; cursor: pointer; transition: all 0.2s;
+        }
+        .ref-tier-btn.active { background: var(--accent-soft); border-color: var(--accent); }
+        .ref-tier-emoji { font-size: 24px; flex-shrink: 0; line-height: 1.3; }
+        .ref-tier-text { display: flex; flex-direction: column; gap: 2px; }
+        .ref-tier-name { font-weight: 600; font-size: 14px; color: var(--text-primary); }
+        .ref-tier-desc { font-size: 12px; color: var(--text-secondary); line-height: 1.4; }
+        .ref-tier-btn.active .ref-tier-name { color: var(--accent); }
+
+        /* ===== PANEL ORDER SOCMED (DEPLOY) ===== */
+        .platform-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+        .platform-btn {
+            display: flex; flex-direction: column; align-items: center; gap: 4px;
+            padding: 10px 4px; border-radius: var(--radius-md); border: 1px solid var(--divider);
+            background: white; cursor: pointer; transition: all 0.2s;
+        }
+        .platform-btn .platform-icon { font-size: 20px; line-height: 1; }
+        .platform-btn .platform-label { font-size: 10px; font-weight: 600; color: var(--text-secondary); text-align: center; line-height: 1.2; }
+        .platform-btn.active { background: var(--accent-soft); border-color: var(--accent); }
+        .platform-btn.active .platform-label { color: var(--accent); }
+
+        .action-chip-list { display: flex; flex-wrap: wrap; gap: 8px; }
+        .action-chip {
+            padding: 8px 14px; border-radius: 16px; border: 1px solid var(--divider);
+            background: white; cursor: pointer; display: flex; flex-direction: column;
+            align-items: center; gap: 2px; transition: all 0.2s;
+        }
+        .action-chip span:first-child { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
+        .action-chip-price { font-size: 11px; font-weight: 700; color: var(--accent); }
+        .action-chip.active { background: var(--accent-soft); border-color: var(--accent); }
+        .action-chip.active span:first-child { color: var(--accent); }
+
+        /* ===== PANEL REKBER GAME (DEPLOY) ===== */
+        .rekber-type-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+        .rekber-type-btn {
+            padding: 12px 10px; border-radius: var(--radius-md); border: 1px solid var(--divider);
+            background: white; font-size: 12px; font-weight: 600; color: var(--text-secondary);
+            cursor: pointer; text-align: center; transition: all 0.2s;
+        }
+        .rekber-type-btn.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+
+        .rekber-agree-row {
+            display: flex; align-items: flex-start; gap: 10px; padding: 12px;
+            background: var(--bg); border: 1px solid var(--divider); border-radius: var(--radius-md);
+            margin-bottom: 4px; cursor: pointer; font-size: 12px; color: var(--text-secondary); line-height: 1.5;
+        }
+        .rekber-agree-row input[type="checkbox"] { margin-top: 2px; flex-shrink: 0; width: 16px; height: 16px; accent-color: var(--accent); }
+
+        .empty-state {
+            text-align: center; padding: 40px 20px; color: var(--text-secondary);
+            font-size: 13px; line-height: 1.6; background: var(--surface); border-radius: var(--radius-xl);
+            border: 1px dashed var(--divider);
+        }
+
+        /* ===== SUBTAB CLIENT DI HALAMAN DEPLOY (beda model dari tab Jobs & chip job-type) ===== */
+        .deploy-subtabs {
+            display: flex; background: var(--surface); border-radius: var(--radius-lg);
+            padding: 4px; gap: 4px; margin-bottom: 18px; box-shadow: var(--shadow-card);
+        }
+        .deploy-subtab-btn {
+            flex: 1; text-align: center; padding: 10px 4px; border: none; background: transparent;
+            border-radius: var(--radius-md); font-size: 11px; font-weight: 600; color: var(--text-secondary);
+            cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; align-items: center; gap: 3px;
+        }
+        .deploy-subtab-icon { font-size: 17px; line-height: 1; }
+        .deploy-subtab-btn.active { background: var(--accent-gradient); color: white; box-shadow: 0 4px 10px rgba(59,130,246,0.25); }
+
+        .monitor-claim-row {
+            display: flex; align-items: flex-start; gap: 10px;
+            background: var(--bg); border-radius: var(--radius-md); padding: 10px 12px;
+            margin-top: 8px; font-size: 12px; color: var(--text-secondary);
+        }
+        .proof-thumb {
+            width: 56px; height: 56px; object-fit: cover; border-radius: var(--radius-md);
+            border: 1px solid var(--divider); cursor: pointer; flex-shrink: 0; background: white;
+        }
+        .proof-thumb-empty {
+            width: 56px; height: 56px; border-radius: var(--radius-md); border: 1px dashed var(--divider);
+            display: flex; align-items: center; justify-content: center; text-align: center;
+            font-size: 9px; color: var(--text-secondary); flex-shrink: 0; background: var(--surface); line-height: 1.3;
+        }
+
+        /* ===== UI SUBMIT TASK (Bukti Upload) ===== */
+        .upload-box {
+            border: 2px dashed var(--divider);
+            border-radius: var(--radius-md);
+            padding: 24px;
+            text-align: center;
+            color: var(--text-secondary);
+            cursor: pointer;
+            margin-bottom: 16px;
+            background: var(--bg);
+            transition: all 0.2s;
+        }
+        .upload-box:active { background: #e2e8f0; }
+        .upload-icon { font-size: 32px; margin-bottom: 8px; color: var(--secondary); display: block;}
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <div class="topbar">
+            <h1>Haraheta Freelance</h1>
+            <button class="icon-btn">🔔</button>
+        </div>
+
+        <!-- 1. JOBS PAGE (MARKETPLACE) -->
+        <div class="page active" id="page-jobs">
+            <div class="jobs-layout" id="jobsLayout">
+                
+                <div class="tab-sidebar">
+                    <button class="tab-btn" data-tab="member"><span class="tab-icon">👥</span><span class="tab-text">Cari Member</span></button>
+                    <button class="tab-btn" data-tab="referral"><span class="tab-icon">📢</span><span class="tab-text">Cari Referral</span></button>
+                    <button class="tab-btn" data-tab="socmed"><span class="tab-icon">❤️</span><span class="tab-text">Kebutuhan Socmed</span></button>
+                    <button class="tab-btn" data-tab="other"><span class="tab-icon">🎮</span><span class="tab-text">Item/Akun Game</span></button>
+                </div>
+
+                <div class="jobs-content" id="jobsContent">
+                    <div id="tasks-member" style="display:none;"></div>
+                    <div id="tasks-referral" style="display:none;"></div>
+                    <div id="tasks-socmed" style="display:none;"></div>
+                    <div id="tasks-other" style="display:none;"></div>
+                </div>
+            </div>
+
+            <!-- Toast Pop-up 0.3 Detik -->
+            <div id="jobToast" class="job-toast"></div>
+        </div>
+
+        <!-- 2. SUBMIT PAGE (HALAMAN KHUSUS WORKER) -->
+        <div class="page" id="page-submit">
+            <div class="page-title">📤 Submit Tugas</div>
+            <div class="page-subtitle">Kirim bukti screenshot tugas yang sudah kamu ambil.</div>
+
+            <!-- Subtab khusus client, muncul begitu pernah deploy minimal 1 job -->
+            <div class="deploy-subtabs" id="clientSubtabs" style="display:none;">
+                <button class="deploy-subtab-btn active" data-subtab="submit">
+                    <span class="deploy-subtab-icon">📤</span><span>Submit Tugas</span>
+                </button>
+                <button class="deploy-subtab-btn" data-subtab="monitor">
+                    <span class="deploy-subtab-icon">👀</span><span>Monitor Live</span>
+                </button>
+                <button class="deploy-subtab-btn" data-subtab="history">
+                    <span class="deploy-subtab-icon">📜</span><span>History</span>
+                </button>
+            </div>
+
+            <div id="submitTugasContent">
+                <div id="submitActiveList"></div>
+                <div class="section-title" id="submitDoneLabel" style="display:none; margin-top:8px;">✅ Menunggu Review</div>
+                <div id="submitDoneList"></div>
+            </div>
+
+            <!-- Konten Monitor Live: job yang masih jalan/belum ditutup client -->
+            <div id="clientMonitorContent" style="display:none;">
+                <div class="page-subtitle" style="margin-bottom:12px;">Pantau progres worker di job yang lagi kamu deploy. Setujui bukti, lalu tutup job kalau udah selesai.</div>
+                <div id="monitorJobsList"></div>
+            </div>
+
+            <!-- Konten History: job yang udah ditutup client -->
+            <div id="clientHistoryContent" style="display:none;">
+                <div class="page-subtitle" style="margin-bottom:12px;">Riwayat semua job yang sudah kamu selesaikan.</div>
+                <div id="historyJobsList"></div>
+            </div>
+
+            <!-- Modal Submit Bukti -->
+            <div class="modal-overlay" id="submitProofModal">
+                <div class="modal-sheet">
+                    <h3>📷 Upload Bukti Tugas</h3>
+                    <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">Pastikan screenshot jelas dan menampilkan bahwa kamu sudah menyelesaikan instruksi klien.</p>
+                    
+                    <div class="upload-box" id="uploadArea">
+                        <span class="upload-icon">📸</span>
+                        <span style="font-weight: 600;">Tap untuk Upload Screenshot</span>
+                    </div>
+                    <input type="file" id="proofFileInput" accept="image/*" style="display:none;">
+
+                    <div class="field-group">
+                        <label class="field-label" for="submitLinkInput">Username Akun / Link Profil kamu</label>
+                        <input type="text" class="textarea-input" id="submitLinkInput" style="min-height: 40px;" placeholder="Contoh: @username / link profil twitter">
+                    </div>
+
+                    <button class="confirm-btn" id="btnSubmitProof">Kirim ke Klien</button>
+                    <button class="cancel-btn" onclick="document.getElementById('submitProofModal').classList.remove('active')">Batal</button>
+                </div>
+            </div>
+
+            <!-- Modal Preview Screenshot (buat Client review di Monitor Live) -->
+            <div class="modal-overlay" id="proofPreviewModal">
+                <div class="modal-sheet">
+                    <h3>📸 Bukti Screenshot Worker</h3>
+                    <img id="proofPreviewImage" src="" alt="Bukti screenshot worker" style="width:100%; border-radius:var(--radius-md); margin-bottom:16px; border:1px solid var(--divider); display:block;">
+                    <div id="proofPreviewLinkRow" style="font-size:13px; color:var(--text-secondary); margin-bottom:16px; word-break:break-all;"></div>
+                    <button class="cancel-btn" onclick="document.getElementById('proofPreviewModal').classList.remove('active')">Tutup</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. DEPLOY PAGE (HALAMAN KHUSUS CLIENT - PINDAHAN DARI MODAL) -->
+        <div class="page" id="page-deploy">
+            <div class="page-title">✍️ Deploy Job Baru</div>
+            <div class="page-subtitle">Pasang iklan tugas mikro kamu di sini.</div>
+
+            <div class="job-type-select" id="jobTypeSelect">
+                <button class="job-type-btn active" data-type="member">👥 Member</button>
+                <button class="job-type-btn" data-type="referral">📢 Referral</button>
+                <button class="job-type-btn" data-type="socmed">❤️ Socmed</button>
+                <button class="job-type-btn" data-type="rekber">🎮 Rekber Game</button>
+            </div>
+
+            <!-- ===== PANEL KHUSUS: ORDER MEMBER ===== -->
+            <div id="memberOrderPanel">
+                <div class="field-group">
+                    <label class="field-label">Mau Beli Member untuk Apa?</label>
+                    <div class="target-select" id="targetSelect">
+                        <button class="target-btn active" data-target="grup">
+                            <span class="target-icon">👥</span><span class="target-label">Grup</span>
+                        </button>
+                        <button class="target-btn" data-target="channel">
+                            <span class="target-icon">📢</span><span class="target-label">Channel</span>
+                        </button>
+                        <button class="target-btn" data-target="both">
+                            <span class="target-icon">👥📢</span><span class="target-label">Keduanya</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="field-group" id="groupLinkGroup">
+                    <label class="field-label" for="groupLinkInput">Link Grup Telegram</label>
+                    <input type="text" class="textarea-input" style="min-height:44px;" id="groupLinkInput" placeholder="t.me/namagrupkamu">
+                </div>
+                <div class="field-group" id="channelLinkGroup" style="display:none;">
+                    <label class="field-label" for="channelLinkInput">Link Channel Telegram</label>
+                    <input type="text" class="textarea-input" style="min-height:44px;" id="channelLinkInput" placeholder="t.me/namachannelkamu">
+                </div>
+
+                <div class="field-group">
+                    <label class="field-label" for="memberBudgetInput">Atur Bujet Kamu Sendiri</label>
+                    <div class="amount-input-wrap">
+                        <span>Rp</span>
+                        <input type="text" inputmode="numeric" id="memberBudgetInput" placeholder="0">
+                    </div>
+                    <div class="quick-amounts" id="memberQuickAmounts">
+                        <button class="quick-amount-btn" data-amount="20000">20rb</button>
+                        <button class="quick-amount-btn" data-amount="40000">40rb</button>
+                        <button class="quick-amount-btn" data-amount="60000">60rb</button>
+                        <button class="quick-amount-btn" data-amount="80000">80rb</button>
+                        <button class="quick-amount-btn" data-amount="100000">100rb</button>
+                    </div>
+                    <div class="field-error" id="memberBudgetError">Bujet minimal Rp 10.000</div>
+                </div>
+
+                <div class="price-tier-note">
+                    Harga <strong>Rp250/member</strong> untuk bujet di bawah Rp50.000, dan <strong>Rp200/member</strong> untuk bujet Rp50.000 ke atas. Tier dihitung dari nominal bujet di atas.
+                </div>
+
+                <div class="member-estimate-box">
+                    <div class="estimate-row"><span>Harga per member</span><span id="estPricePerMember">Rp 0</span></div>
+                    <div class="estimate-row highlight"><span>Estimasi member masuk</span><span id="estMemberCount">0 member</span></div>
+                </div>
+
+                <div class="field-group antidup-card" id="antiDupCard">
+                    <div class="antidup-head">
+                        <div class="antidup-title">🛡️ Anti-Duplikat Worker</div>
+                        <label class="switch">
+                            <input type="checkbox" id="antiDupToggle" disabled>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <p class="antidup-desc" id="antiDupDesc">Memeriksa status fitur kamu...</p>
+                    <div class="antidup-status" id="antiDupStatus" style="display:none;">✅ Fitur sudah aktif di akun kamu — gratis untuk semua order berikutnya, gak akan ditagih lagi.</div>
+                </div>
+
+                <div class="field-group antidup-card" id="memberSSCard">
+                    <div class="antidup-head">
+                        <div class="antidup-title">📸 Worker Wajib Kirim Screenshot Bukti?</div>
+                        <label class="switch">
+                            <input type="checkbox" id="memberRequireSSToggle" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <p class="antidup-desc" id="memberSSDesc">Kalau dimatikan, worker cukup tandai tugas selesai tanpa upload bukti.</p>
+                    <div class="antidup-status" id="memberSSAutoNote" style="display:none;">🤖 Otomatis nonaktif — Anti-Duplikat pakai bot pengawas, worker gak perlu kirim SS manual lagi.</div>
+                </div>
+            </div>
+
+            <!-- ===== PANEL KHUSUS: ORDER REFERRAL ===== -->
+            <div id="referralOrderPanel" style="display:none;">
+                <div class="field-group">
+                    <label class="field-label">Pilih Tier Referral</label>
+                    <div class="ref-tier-select" id="refTierSelect">
+                        <button class="ref-tier-btn active" data-tier="1">
+                            <span class="ref-tier-emoji">👆</span>
+                            <span class="ref-tier-text">
+                                <span class="ref-tier-name">Tier 1 — Klik & Baca</span>
+                                <span class="ref-tier-desc">Worker cuma perlu buka link & baca sampai selesai</span>
+                            </span>
+                        </button>
+                        <button class="ref-tier-btn" data-tier="2">
+                            <span class="ref-tier-emoji">🎯</span>
+                            <span class="ref-tier-text">
+                                <span class="ref-tier-name">Tier 2 — Kondisi Khusus</span>
+                                <span class="ref-tier-desc">Ada syarat tambahan, bayaran per referral kamu yang atur</span>
+                            </span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="field-group">
+                    <label class="field-label" for="refLinkInput">Link Referral</label>
+                    <input type="text" class="textarea-input" style="min-height:44px;" id="refLinkInput" placeholder="https://link-referral-kamu.com">
+                </div>
+
+                <div class="field-group">
+                    <label class="field-label" for="refUsernameInput">Username Kamu (buat verifikasi)</label>
+                    <input type="text" class="textarea-input" style="min-height:44px;" id="refUsernameInput" placeholder="@usernamekamu">
+                </div>
+
+                <!-- TIER 1: klik & baca doang -->
+                <div id="refTier1Fields">
+                    <div class="field-group">
+                        <label class="field-label" for="refTier1InstructionInput">Instruksi Singkat (1 baris)</label>
+                        <input type="text" class="textarea-input" style="min-height:44px;" id="refTier1InstructionInput" placeholder="Contoh: klik link, scroll sampai bawah">
+                    </div>
+                    <div class="field-group">
+                        <label class="field-label" for="refTier1CountInput">Jumlah Klik/Referral yang Dibutuhkan</label>
+                        <div class="amount-input-wrap">
+                            <span>#</span>
+                            <input type="text" inputmode="numeric" id="refTier1CountInput" placeholder="0">
+                        </div>
+                        <div class="quick-amounts" id="refTier1QuickCount">
+                            <button class="quick-amount-btn" data-count="50">50</button>
+                            <button class="quick-amount-btn" data-count="100">100</button>
+                            <button class="quick-amount-btn" data-count="250">250</button>
+                            <button class="quick-amount-btn" data-count="500">500</button>
+                        </div>
+                    </div>
+                    <div class="price-tier-note">Harga flat <strong>Rp200/klik</strong> untuk Tier 1.</div>
+                </div>
+
+                <!-- TIER 2: kondisi khusus -->
+                <div id="refTier2Fields" style="display:none;">
+                    <div class="field-group">
+                        <label class="field-label" for="refTier2InstructionInput">Jelasin Apa yang Harus Dikerjain</label>
+                        <textarea class="textarea-input" id="refTier2InstructionInput" rows="3" placeholder="Contoh: daftar pakai link, verifikasi nomor HP, deposit minimal 50rb sampai approved."></textarea>
+                    </div>
+                    <div class="field-group">
+                        <label class="field-label" for="refTier2PriceInput">Bayaran per Referral Berhasil</label>
+                        <div class="amount-input-wrap">
+                            <span>Rp</span>
+                            <input type="text" inputmode="numeric" id="refTier2PriceInput" placeholder="Min 1.000">
+                        </div>
+                        <div class="field-error" id="refTier2PriceError">Bayaran per referral minimal Rp 1.000</div>
+                    </div>
+                    <div class="field-group">
+                        <label class="field-label" for="refTier2CountInput">Target Jumlah Referral</label>
+                        <div class="amount-input-wrap">
+                            <span>#</span>
+                            <input type="text" inputmode="numeric" id="refTier2CountInput" placeholder="0">
+                        </div>
+                    </div>
+                    <div class="price-tier-note">Bujet di atas Rp1.000/referral cocok buat task yang lebih ribet (daftar, verifikasi, dsb).</div>
+                </div>
+
+                <div class="member-estimate-box" id="refEstimateBox">
+                    <div class="estimate-row"><span>Harga per referral</span><span id="refEstPrice">Rp 0</span></div>
+                    <div class="estimate-row"><span>Target jumlah referral</span><span id="refEstCount">0 orang</span></div>
+                    <div class="estimate-row highlight"><span>Total bayaran worker</span><span id="refEstSubtotal">Rp 0</span></div>
+                </div>
+
+                <div class="field-group antidup-card">
+                    <div class="antidup-head">
+                        <div class="antidup-title">📸 Worker Wajib Kirim Screenshot Bukti?</div>
+                        <label class="switch">
+                            <input type="checkbox" id="referralRequireSSToggle" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <p class="antidup-desc">Kalau dimatikan, worker cukup tandai tugas selesai tanpa upload bukti.</p>
+                </div>
+            </div>
+
+            <!-- ===== PANEL KHUSUS: ORDER SOCMED ===== -->
+            <div id="socmedOrderPanel" style="display:none;">
+                <div class="field-group">
+                    <label class="field-label">Pilih Platform</label>
+                    <div class="platform-grid" id="platformGrid"></div>
+                </div>
+
+                <div class="field-group">
+                    <label class="field-label">Pilih Aksi</label>
+                    <div class="action-chip-list" id="actionChipList"></div>
+                </div>
+
+                <div class="field-group">
+                    <label class="field-label" for="socmedTargetInput">Link Postingan / Username / Toko Target</label>
+                    <input type="text" class="textarea-input" style="min-height:44px;" id="socmedTargetInput" placeholder="Link postingan, profil, atau toko target">
+                </div>
+
+                <div class="field-group">
+                    <label class="field-label" for="socmedBudgetInput">Atur Bujet Kamu Sendiri</label>
+                    <div class="amount-input-wrap">
+                        <span>Rp</span>
+                        <input type="text" inputmode="numeric" id="socmedBudgetInput" placeholder="0">
+                    </div>
+                    <div class="quick-amounts" id="socmedQuickAmounts">
+                        <button class="quick-amount-btn" data-amount="20000">20rb</button>
+                        <button class="quick-amount-btn" data-amount="50000">50rb</button>
+                        <button class="quick-amount-btn" data-amount="100000">100rb</button>
+                        <button class="quick-amount-btn" data-amount="200000">200rb</button>
+                    </div>
+                    <div class="field-error" id="socmedBudgetError">Bujet minimal Rp 10.000</div>
+                </div>
+
+                <div class="member-estimate-box" id="socmedEstimateBox">
+                    <div class="estimate-row"><span>Platform & Aksi</span><span id="socmedEstLabel">-</span></div>
+                    <div class="estimate-row"><span>Harga per aksi</span><span id="socmedEstPrice">Rp 0</span></div>
+                    <div class="estimate-row highlight"><span>Estimasi worker dapat</span><span id="socmedEstCount">0 orang</span></div>
+                </div>
+
+                <div class="field-group antidup-card">
+                    <div class="antidup-head">
+                        <div class="antidup-title">📸 Worker Wajib Kirim Screenshot Bukti?</div>
+                        <label class="switch">
+                            <input type="checkbox" id="socmedRequireSSToggle" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <p class="antidup-desc">Kalau dimatikan, worker cukup tandai tugas selesai tanpa upload bukti.</p>
+                </div>
+            </div>
+
+            <!-- ===== PANEL KHUSUS: REKBER GAME ===== -->
+            <div id="rekberOrderPanel" style="display:none;">
+                <div class="field-group">
+                    <label class="field-label">Tipe Transaksi</label>
+                    <div class="rekber-type-grid" id="rekberTypeGrid">
+                        <button class="rekber-type-btn active" data-type="jual_akun">🎮 Jual Akun</button>
+                        <button class="rekber-type-btn" data-type="jual_item">📦 Jual Item/Currency</button>
+                    </div>
+                </div>
+
+                <div class="field-group">
+                    <label class="field-label" for="rekberGameInput">Nama Game/Aplikasi</label>
+                    <input type="text" class="textarea-input" style="min-height:44px;" id="rekberGameInput" placeholder="Misal: Mobile Legends" list="rekberGameList">
+                    <datalist id="rekberGameList">
+                        <option value="Mobile Legends: Bang Bang">
+                        <option value="PUBG Mobile">
+                        <option value="Free Fire">
+                        <option value="Genshin Impact">
+                        <option value="Valorant">
+                        <option value="Honkai: Star Rail">
+                        <option value="Call of Duty: Mobile">
+                        <option value="Clash of Clans">
+                        <option value="Clash Royale">
+                        <option value="Roblox">
+                        <option value="Arena of Valor">
+                        <option value="Honor of Kings">
+                        <option value="League of Legends: Wild Rift">
+                        <option value="Point Blank">
+                        <option value="Growtopia">
+                        <option value="Stumble Guys">
+                    </datalist>
+                </div>
+
+                <div class="field-group">
+                    <label class="field-label">Platform</label>
+                    <div class="quick-amounts" id="rekberPlatformSelect">
+                        <button class="quick-amount-btn active" data-platform="mobile">📱 Mobile</button>
+                        <button class="quick-amount-btn" data-platform="pc">💻 PC</button>
+                        <button class="quick-amount-btn" data-platform="console">🎮 Console</button>
+                        <button class="quick-amount-btn" data-platform="cross">🌐 Cross-Platform</button>
+                    </div>
+                </div>
+
+                <div class="field-group">
+                    <label class="field-label" for="rekberServerInput">Server/Region</label>
+                    <input type="text" class="textarea-input" style="min-height:44px;" id="rekberServerInput" placeholder="Misal: Asia, Indonesia, SEA, dll (opsional)">
+                </div>
+
+                <div class="field-group">
+                    <label class="field-label" for="rekberDescInput">Deskripsi Detail</label>
+                    <textarea class="textarea-input" id="rekberDescInput" rows="3" placeholder="Jelasin detail: rank, skin, jumlah item, kondisi akun, dll. Sertakan link screenshot bukti kalau ada."></textarea>
+                </div>
+
+                <div class="field-group">
+                    <label class="field-label" for="rekberContactInput">Username/Kontak Penjual</label>
+                    <input type="text" class="textarea-input" style="min-height:44px;" id="rekberContactInput" placeholder="@usernamekamu">
+                </div>
+
+                <div class="field-group">
+                    <label class="field-label" for="rekberPriceInput">Harga yang Diinginkan</label>
+                    <div class="amount-input-wrap">
+                        <span>Rp</span>
+                        <input type="text" inputmode="numeric" id="rekberPriceInput" placeholder="0">
+                    </div>
+                    <div class="field-error" id="rekberPriceError">Harga minimal Rp 10.000</div>
+                </div>
+
+                <div class="member-estimate-box" id="rekberEstimateBox">
+                    <div class="estimate-row"><span>Ongkos post listing</span><span>Rp 1.000</span></div>
+                    <div class="estimate-row highlight"><span>Estimasi fee rekber (Haraheta Tim)</span><span id="rekberEstFee">Rp 0</span></div>
+                </div>
+
+                <div class="field-group antidup-card" id="harahetaCard">
+                    <div class="antidup-head">
+                        <div class="antidup-title">🛡️ Pakai Jasa Rekber Admin Haraheta <span style="color:var(--accent);">(Direkomendasikan)</span></div>
+                        <label class="switch">
+                            <input type="checkbox" id="rekberHarahetaToggle">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <p class="antidup-desc">Aktifkan buat baca detail fee rekber & lanjut posting listing kamu. Transaksi di sini wajib lewat Tim Haraheta.</p>
+                </div>
+
+                <label class="rekber-agree-row" id="rekberAgreeRow">
+                    <input type="checkbox" id="rekberAgreeCheck">
+                    <span>Saya konfirmasi item/jasa ini bukan hasil curian, cheat, hack, atau ilegal, dan transaksi ini sesuai aturan platform & Telegram.</span>
+                </label>
+            </div>
+
+            <!-- Modal Penjelasan Fee Rekber Admin Haraheta -->
+            <div class="modal-overlay" id="harahetaFeeModal">
+                <div class="modal-sheet">
+                    <h3>🛡️ Jasa Rekber Admin Haraheta</h3>
+                    <p style="font-size:13px; color:var(--text-secondary); margin-bottom:16px; line-height:1.6;">
+                        Tim Haraheta jadi penengah transaksi kamu biar aman dari penipuan. Begini struktur fee-nya:
+                    </p>
+                    <div class="fee-breakdown" style="margin-bottom:16px;">
+                        <div class="fee-row"><span>Transaksi &lt; Rp100.000</span><span>Rp1.000 / kelipatan Rp10rb</span></div>
+                        <div class="fee-row"><span>Rp100.000 – Rp1.000.000</span><span>Flat Rp10.000</span></div>
+                        <div class="fee-row"><span>&gt; Rp1.000.000</span><span>5% dari nilai transaksi</span></div>
+                    </div>
+                    <p style="font-size:12px; color:var(--text-secondary); margin-bottom:20px; line-height:1.6;">
+                        Fee ini <strong>belum dipotong sekarang</strong>. Baru berlaku pas transaksi diproses Tim Haraheta setelah ketemu pembeli/penjual. Ongkos post listing tetap Rp1.000 flat, terpisah dari fee ini.
+                    </p>
+                    <button class="cancel-btn" onclick="document.getElementById('harahetaFeeModal').classList.remove('active')">Tutup, Saya Paham</button>
+                </div>
+            </div>
+
+            <!-- ===== PANEL GENERIK: LAINNYA ===== -->
+            <div id="genericOrderPanel" style="display:none;">
+                <div class="field-group">
+                    <label class="field-label" for="jobTitleInput">Judul Job & Instruksi Singkat</label>
+                    <textarea class="textarea-input" id="jobTitleInput" placeholder="Contoh: Tolong follow dan retweet postingan teratas akun @contoh, wajib real account." rows="3"></textarea>
+                </div>
+
+                <div class="field-group">
+                    <label class="field-label" for="jobAmountInput">Total Nominal Hadiah untuk Worker (Escrow)</label>
+                    <div class="amount-input-wrap">
+                        <span>Rp</span>
+                        <input type="text" inputmode="numeric" id="jobAmountInput" placeholder="0">
+                    </div>
+                    <div class="quick-amounts" id="jobQuickAmounts">
+                        <button class="quick-amount-btn" data-amount="25000">25rb</button>
+                        <button class="quick-amount-btn" data-amount="50000">50rb</button>
+                        <button class="quick-amount-btn" data-amount="100000">100rb</button>
+                    </div>
+                    <div class="field-error" id="jobAmountError">Minimal nominal task Rp 10.000</div>
+                </div>
+            </div>
+
+            <div class="escrow-note">
+                <span>🔒</span>
+                <span>Dana akan ditahan platform (escrow) sampai kamu memvalidasi bukti dari Worker. Job baru tayang setelah dana ini terpotong.</span>
+            </div>
+
+            <div class="fee-breakdown" id="feeBreakdownBox"></div>
+
+            <button class="confirm-btn" id="jobConfirmBtn" disabled>Bayar Escrow & Tayangkan Job</button>
+        </div>
+
+        <!-- 4. DOMPET PAGE -->
+        <div class="page" id="page-wallet">
+            <div class="balance-card">
+                <div class="balance-label">Saldo Tersedia</div>
+                <div class="balance-amount">Rp 10.000.000</div>
+                <div class="balance-idr">≈ 611 USDT</div>
+                <div class="action-row">
+                    <button class="btn-action btn-deposit" id="depositBtn">➕ Deposit</button>
+                    <button class="btn-action btn-withdraw" id="withdrawBtn">💸 Withdraw</button>
+                </div>
+            </div>
+            
+            <div class="section-title" style="margin-top: 16px;">📋 Transaksi Terakhir</div>
+            <div class="tx-list">
+                <div class="tx-item">
+                    <div class="tx-info"><span class="tx-title">Withdraw via QRIS</span><span class="tx-date">Hari ini, 14:30</span></div>
+                    <span class="tx-amount minus">-Rp 100.000</span>
+                </div>
+                <div class="tx-item">
+                    <div class="tx-info"><span class="tx-title">Deposit via xRocket</span><span class="tx-date">Kemarin, 10:15</span></div>
+                    <span class="tx-amount plus">+Rp 200.000</span>
+                </div>
+            </div>
+
+            <!-- Modal Metode Pembayaran (Sama seperti sebelumnya, disembunyikan isinya biar kode ringkas, tapi ID tetap sama) -->
+            <div class="modal-overlay" id="depositModal">
+                <div class="modal-sheet">
+                    <h3>Deposit via</h3>
+                    <div class="option-card" data-method="qris_seabank" data-label="QRIS Seabank" data-icon="🏦" data-sub="Instan, bebas biaya" data-action="deposit"><div class="option-left"><div class="option-icon">🏦</div><div class="option-text">QRIS Seabank<small>Instan, bebas biaya</small></div></div><span>›</span></div>
+                    <div class="option-card" data-method="xrocket" data-label="xRocket" data-icon="🚀" data-sub="Crypto, USDT" data-action="deposit"><div class="option-left"><div class="option-icon">🚀</div><div class="option-text">xRocket<small>Crypto, USDT</small></div></div><span>›</span></div>
+                    <button class="cancel-btn" onclick="document.getElementById('depositModal').classList.remove('active')">Batal</button>
+                </div>
+            </div>
+            <div class="modal-overlay" id="withdrawModal">
+                <div class="modal-sheet">
+                    <h3>Withdraw via</h3>
+                    <div class="option-card" data-method="qris" data-label="QRIS" data-icon="📱" data-sub="Instan, bebas biaya" data-action="withdraw"><div class="option-left"><div class="option-icon">📱</div><div class="option-text">QRIS<small>Instan, bebas biaya</small></div></div><span>›</span></div>
+                    <div class="option-card" data-method="xrocket" data-label="xRocket" data-icon="🚀" data-sub="Crypto, USDT" data-action="withdraw"><div class="option-left"><div class="option-icon">🚀</div><div class="option-text">xRocket<small>Crypto, USDT</small></div></div><span>›</span></div>
+                    <button class="cancel-btn" onclick="document.getElementById('withdrawModal').classList.remove('active')">Batal</button>
+                </div>
+            </div>
+            
+            <div class="modal-overlay" id="payInstructionModal">
+                <div class="modal-sheet">
+                    <div class="pay-back-row">
+                        <button class="pay-back-btn" onclick="document.getElementById('payInstructionModal').classList.remove('active')">←</button>
+                        <h3 id="payInstructionTitle">Deposit</h3>
+                    </div>
+                    <div class="field-group">
+                        <label class="field-label" for="payAmountInput">Nominal</label>
+                        <div class="amount-input-wrap"><span>Rp</span><input type="text" inputmode="numeric" id="payAmountInput" placeholder="0"></div>
+                        <div class="field-error" id="payAmountError">Masukkan nominal minimal Rp 10.000</div>
+                    </div>
+                    <button class="confirm-btn" id="payConfirmBtn" disabled>Saya Sudah Bayar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. PROFILE PAGE -->
+        <div class="page" id="page-profile">
+            <div class="profile-header">
+                <div class="avatar-large">D</div>
+                <div class="profile-name">Dika Kurniawan</div>
+                <div class="profile-username">@dikakurniawan</div>
+                <div class="profile-id"><span>🆔</span> ID: 1234567890</div>
+                <div class="badge-row"><span class="badge">⚒️ Worker</span><span class="badge">📋 Client</span></div>
+            </div>
+            <div class="stat-grid">
+                <div class="stat-card"><div class="stat-value">12</div><div class="stat-label">✅ Task Selesai</div></div>
+                <div class="stat-card"><div class="stat-value">4.8</div><div class="stat-label">⭐ Rating</div></div>
+            </div>
+            <div class="referral-menu" id="openReferralModal">
+                <div style="display: flex; align-items: center; gap: 12px;"><span style="font-size: 24px;">🔗</span><div><div style="font-weight: 600; color: var(--text-primary);">Undang Teman</div><div style="font-size: 12px; color: var(--text-secondary);">Dapatkan bonus referral</div></div></div>
+                <span style="color: var(--accent); font-weight: 600;">Lihat ›</span>
+            </div>
+            
+            <!-- Modal Referral -->
+            <div class="modal-overlay" id="referralModal">
+                <div class="modal-sheet">
+                    <h3>🔗 Referral Kamu</h3>
+                    <div class="referral-link-box" style="background:var(--bg); border:1px solid var(--divider); border-radius:var(--radius-md); padding:12px; margin:16px 0;">
+                        <span style="font-size:14px; word-break:break-all;">https://t.me/HarahetaFreelanceBot?start=ref12345</span>
+                    </div>
+                    <button class="cancel-btn" onclick="document.getElementById('referralModal').classList.remove('active')">Tutup</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== BOTTOM NAVIGATION BARS (5 ITEM) ===== -->
+        <div class="bottom-nav">
+            <div class="nav-item active" data-page="page-jobs"><span class="nav-icon">📋</span>Jobs</div>
+            <div class="nav-item" data-page="page-submit"><span class="nav-icon">📤</span>Submit</div>
+            <div class="nav-item" data-page="page-deploy"><span class="nav-icon">✍️</span>Deploy</div>
+            <div class="nav-item" data-page="page-wallet"><span class="nav-icon">💰</span>Dompet</div>
+            <div class="nav-item" data-page="page-profile"><span class="nav-icon">👤</span>Profil</div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================================
+        // SUPABASE CLIENT
+        // ============================================================
+        const SUPABASE_URL = 'https://uhsotknuawggqbykbxug.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVoc290a251YXdnZ3FieWtieHVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE3NjUyMDQsImV4cCI6MjA5NzM0MTIwNH0.ewaqLux80x8YFeZ6imd4NqghtGUMROxOe1AKKMhMdAQ';
+
+        const db = {
+            headers: {
+                'Content-Type': 'application/json',
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                'Prefer': 'return=representation'
+            },
+            async get(table, query = '') {
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}${query}`, { headers: this.headers });
+                if (!res.ok) throw await res.json();
+                return res.json();
+            },
+            async post(table, data) {
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+                    method: 'POST', headers: this.headers, body: JSON.stringify(data)
+                });
+                if (!res.ok) throw await res.json();
+                return res.json();
+            },
+            async patch(table, query, data) {
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}${query}`, {
+                    method: 'PATCH', headers: this.headers, body: JSON.stringify(data)
+                });
+                if (!res.ok) throw await res.json();
+                return res.json();
+            },
+            async uploadProof(claimId, fileDataUrl) {
+                const base64 = fileDataUrl.split(',')[1];
+                const byteChars = atob(base64);
+                const byteArr = new Uint8Array(byteChars.length);
+                for (let i = 0; i < byteChars.length; i++) byteArr[i] = byteChars.charCodeAt(i);
+                const blob = new Blob([byteArr], { type: 'image/jpeg' });
+                const path = `claims/${claimId}/${Date.now()}.jpg`;
+                const res = await fetch(`${SUPABASE_URL}/storage/v1/object/proofs/${path}`, {
+                    method: 'POST',
+                    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'image/jpeg' },
+                    body: blob
+                });
+                if (!res.ok) throw await res.json();
+                const signed = await fetch(`${SUPABASE_URL}/storage/v1/object/sign/proofs/${path}`, {
+                    method: 'POST',
+                    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ expiresIn: 604800 })
+                });
+                const signedData = await signed.json();
+                return `${SUPABASE_URL}/storage/v1${signedData.signedURL}`;
+            }
+        };
+
+        // ============================================================
+        // AUTH — Ambil data user dari Telegram, upsert ke Supabase
+        // ============================================================
+        let CURRENT_USER = null;
+
+        async function initUser() {
+            const tgUser = tg?.initDataUnsafe?.user;
+            if (!tgUser) {
+                // Mode testing di browser — pakai dummy
+                CURRENT_USER = { id: 'test-uuid', telegram_id: 999999, username: 'testuser', full_name: 'Test User', balance_idr: 10000000, anti_dup_active: false };
+                renderProfileUI();
+                return;
+            }
+            try {
+                const existing = await db.get('users', `?telegram_id=eq.${tgUser.id}&limit=1`);
+                if (existing.length > 0) {
+                    CURRENT_USER = existing[0];
+                } else {
+                    const created = await db.post('users', {
+                        telegram_id: tgUser.id,
+                        username: tgUser.username || null,
+                        full_name: `${tgUser.first_name || ''} ${tgUser.last_name || ''}`.trim(),
+                        balance_idr: 0,
+                        anti_dup_active: false
+                    });
+                    CURRENT_USER = created[0];
+                }
+                renderProfileUI();
+                if (CURRENT_USER.anti_dup_active) {
+                    antiDupActivated = true;
+                    renderAntiDupUI();
+                }
+            } catch (err) {
+                console.error('initUser error:', err);
+            }
+        }
+
+        function renderProfileUI() {
+            if (!CURRENT_USER) return;
+            const el = (s) => document.querySelector(s);
+            if (el('.profile-name')) el('.profile-name').textContent = CURRENT_USER.full_name || 'User';
+            if (el('.profile-username')) el('.profile-username').textContent = CURRENT_USER.username ? `@${CURRENT_USER.username}` : '';
+            if (el('.avatar-large')) el('.avatar-large').textContent = (CURRENT_USER.full_name || 'U')[0].toUpperCase();
+            if (el('.profile-id')) el('.profile-id').innerHTML = `<span>🆔</span> ID: ${CURRENT_USER.telegram_id}`;
+            if (el('.balance-amount')) el('.balance-amount').textContent = 'Rp ' + (CURRENT_USER.balance_idr || 0).toLocaleString('id-ID');
+        }
+
+        // ============================================================
+        // LOAD JOBS dari Supabase → JOBS_STATE
+        // ============================================================
+        async function loadJobsFromDB() {
+            try {
+                const jobs = await db.get('jobs', '?status=eq.available&order=created_at.desc');
+                JOBS_STATE = jobs.map(j => ({
+                    id: j.id, jobType: j.job_type, badge: j.badge,
+                    displayPrice: j.display_price, title: j.title,
+                    detailTags: j.detail_tags || [], requiresSS: j.requires_ss,
+                    status: j.status, kind: j.job_type === 'rekber' ? 'rekber' : undefined
+                }));
+                renderJobsList();
+                updateClientSubtabsVisibility();
+            } catch (err) { console.error('loadJobsFromDB error:', err); }
+        }
+
+        // ============================================================
+        // LOAD CLAIMS dari Supabase → CLAIMS_STATE
+        // ============================================================
+        async function loadClaimsFromDB() {
+            if (!CURRENT_USER) return;
+            try {
+                const claims = await db.get('claims',
+                    `?worker_id=eq.${CURRENT_USER.id}&status=in.(active,submitted)&select=*,jobs(*)`
+                );
+                CLAIMS_STATE = claims.map(c => ({
+                    id: c.id, jobId: c.job_id,
+                    job: {
+                        id: c.jobs.id, badge: c.jobs.badge, title: c.jobs.title,
+                        detailTags: c.jobs.detail_tags || [], requiresSS: c.jobs.requires_ss,
+                        displayPrice: c.jobs.display_price
+                    },
+                    status: c.status,
+                    proofImage: c.proof_image_url || null,
+                    proofLink: c.proof_link || null
+                }));
+                renderSubmitPage();
+            } catch (err) { console.error('loadClaimsFromDB error:', err); }
+        }
+
+        const tg = window.Telegram?.WebApp;
+        if (tg) { tg.ready(); tg.expand(); }
+        // Catatan testing: tg?.sendData() di Telegram asli otomatis nutup Mini App tiap dipanggil.
+        // Selama fase testing, pemanggilan sendData/close di bawah ini DIMATIKAN (dikomen) biar mini app
+        // gak nutup sendiri tiap kamu konfirmasi aksi. Tinggal uncomment pas mau production.
+
+        // Navigasi Bottom Bar
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', () => {
+                document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+                document.getElementById(item.dataset.page).classList.add('active');
+                document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+                item.classList.add('active');
+            });
+        });
+
+        // ===== STATE: JOB YANG DI-DEPLOY & TUGAS YANG DIAMBIL (in-memory, buat testing) =====
+        let JOBS_STATE = [];     // job hasil deploy, muncul di tab Jobs
+        let CLAIMS_STATE = [];   // tugas yang sudah "diambil" worker, muncul di Submit Tugas
+        let jobIdCounter = 1;
+        let claimIdCounter = 1;
+        let currentSubmittingClaimId = null;
+
+        function renderTaskCardHTML(job) {
+            const detailTags = job.detailTags.map(t => `<span>${t}</span>`).join('');
+            const actionBtn = job.kind === 'rekber'
+                ? `<button class="btn-ambil" onclick="contactHaraheta('${job.id}')">Hubungi Admin</button>`
+                : `<button class="btn-ambil" onclick="claimJob('${job.id}')">Ambil</button>`;
+            return `
+                <div class="task-card" data-job-id="${job.id}">
+                    <div class="task-header"><span class="task-type">${job.badge}</span><span class="task-price">${formatRupiahSafe(job.displayPrice)}</span></div>
+                    <div class="task-title">${job.title}</div>
+                    <div class="task-detail">${detailTags}</div>
+                    <div class="task-footer"><span class="client-rating">📌 Baru saja diposting</span>${actionBtn}</div>
+                </div>
+            `;
+        }
+
+        function renderJobsList() {
+            ['member', 'referral', 'socmed', 'other'].forEach(key => {
+                const container = document.getElementById(`tasks-${key}`);
+                if (!container) return;
+                const jobsForTab = JOBS_STATE.filter(j => j.jobType === key && j.status === 'available');
+                container.innerHTML = jobsForTab.length === 0
+                    ? `<div class="empty-state">Belum ada job di kategori ini.<br>Yuk deploy job pertama kamu lewat tab Deploy! 🚀</div>`
+                    : jobsForTab.map(renderTaskCardHTML).join('');
+            });
+        }
+
+        function contactHaraheta() {
+            alert("Untuk transaksi ini, hubungi Tim Haraheta lewat Dompet/Support buat proses rekber. (Demo: belum terhubung ke admin sungguhan)");
+        }
+
+        function claimJob(jobId) {
+            const job = JOBS_STATE.find(j => j.id === jobId);
+            if (!job) return;
+            job.status = 'claimed';
+
+            const claim = { id: 'claim_' + (claimIdCounter++), jobId: job.id, job, status: 'active' };
+            CLAIMS_STATE.push(claim);
+
+            renderJobsList();
+            renderSubmitPage();
+
+            alert(`Tugas "${job.title}" berhasil diambil! Cek tab Submit buat lapor bukti.`);
+            document.querySelector('.nav-item[data-page="page-submit"]').click();
+        }
+
+        function renderActiveClaimCard(claim) {
+            const job = claim.job;
+            const actionBtn = job.requiresSS
+                ? `<button class="btn-ambil btn-full" onclick="openSubmitModal('${claim.id}')">Kirim Bukti (Screenshot)</button>`
+                : `<button class="btn-ambil btn-full" onclick="markClaimDone('${claim.id}')">✅ Tandai Selesai (Tanpa Bukti)</button>`;
+            return `
+                <div class="task-card" style="border: 2px solid var(--accent-soft);">
+                    <div class="task-header"><span class="task-type">${job.badge}</span><span class="task-price" style="font-size:16px;">Aktif</span></div>
+                    <div class="task-title">${job.title}</div>
+                    <div class="task-detail">${job.detailTags.map(t => `<span>${t}</span>`).join('')}</div>
+                    ${actionBtn}
+                </div>
+            `;
+        }
+
+        function renderDoneClaimCard(claim) {
+            const job = claim.job;
+            return `
+                <div class="task-card" style="opacity:0.6;">
+                    <div class="task-header"><span class="task-type" style="background:#e2e8f0; color:var(--text-secondary);">Selesai</span></div>
+                    <div class="task-title">${job.title}</div>
+                    <div class="task-detail"><span>✅ Bukti sudah dikirim, menunggu review klien.</span></div>
+                </div>
+            `;
+        }
+
+        function renderSubmitPage() {
+            const activeContainer = document.getElementById('submitActiveList');
+            const doneContainer = document.getElementById('submitDoneList');
+            const doneLabel = document.getElementById('submitDoneLabel');
+
+            const actives = CLAIMS_STATE.filter(c => c.status === 'active');
+            const dones = CLAIMS_STATE.filter(c => c.status === 'submitted');
+
+            activeContainer.innerHTML = actives.length === 0
+                ? `<div class="empty-state">Kamu belum ngambil tugas apapun.<br>Cek tab Jobs buat mulai ambil tugas! 🔎</div>`
+                : actives.map(renderActiveClaimCard).join('');
+
+            doneLabel.style.display = dones.length > 0 ? 'block' : 'none';
+            doneContainer.innerHTML = dones.map(renderDoneClaimCard).join('');
+        }
+
+        function markClaimDone(claimId, proofImageData, proofLink) {
+            const claim = CLAIMS_STATE.find(c => c.id === claimId);
+            if (!claim) return;
+            claim.status = 'submitted';
+            claim.proofImage = proofImageData || null;
+            claim.proofLink = proofLink || '';
+            currentSubmittingClaimId = null;
+            renderSubmitPage();
+        }
+
+        // ===== SUBTAB CLIENT DI HALAMAN SUBMIT: SUBMIT TUGAS / MONITOR LIVE / HISTORY =====
+        const clientSubtabs = document.getElementById('clientSubtabs');
+        const submitTugasContent = document.getElementById('submitTugasContent');
+        const clientMonitorContent = document.getElementById('clientMonitorContent');
+        const clientHistoryContent = document.getElementById('clientHistoryContent');
+
+        function updateClientSubtabsVisibility() {
+            clientSubtabs.style.display = JOBS_STATE.length > 0 ? 'flex' : 'none';
+        }
+
+        clientSubtabs.addEventListener('click', (e) => {
+            const btn = e.target.closest('.deploy-subtab-btn');
+            if (!btn) return;
+            const subtab = btn.dataset.subtab;
+
+            clientSubtabs.querySelectorAll('.deploy-subtab-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            submitTugasContent.style.display = subtab === 'submit' ? 'block' : 'none';
+            clientMonitorContent.style.display = subtab === 'monitor' ? 'block' : 'none';
+            clientHistoryContent.style.display = subtab === 'history' ? 'block' : 'none';
+
+            if (subtab === 'monitor') renderMonitorList();
+            if (subtab === 'history') renderHistoryList();
+        });
+
+        function renderMonitorList() {
+            const container = document.getElementById('monitorJobsList');
+            const liveJobs = JOBS_STATE.filter(j => j.status !== 'closed');
+
+            if (liveJobs.length === 0) {
+                container.innerHTML = `<div class="empty-state">Belum ada job yang lagi live.<br>Deploy job baru lewat tab "Buat Job"! 🚀</div>`;
+                return;
+            }
+
+            container.innerHTML = liveJobs.map(job => {
+                const claims = CLAIMS_STATE.filter(c => c.jobId === job.id);
+                const activeCount = claims.filter(c => c.status === 'active').length;
+                const submittedClaims = claims.filter(c => c.status === 'submitted');
+                const approvedCount = claims.filter(c => c.status === 'approved').length;
+
+                let statusLine = 'Belum ada worker yang ambil';
+                if (claims.length > 0) {
+                    statusLine = `${activeCount} sedang kerja · ${submittedClaims.length} nunggu approval · ${approvedCount} disetujui`;
+                }
+
+                const pendingReviewHTML = submittedClaims.map(c => {
+                    const thumb = c.proofImage
+                        ? `<img src="${c.proofImage}" alt="Bukti screenshot" class="proof-thumb" onclick="openProofPreview('${c.id}')">`
+                        : `<div class="proof-thumb-empty">Tanpa SS</div>`;
+                    const linkLine = c.proofLink ? `<div style="font-size:11px; color:var(--text-secondary); word-break:break-all; margin-top:2px;">${c.proofLink}</div>` : '';
+                    return `
+                        <div class="monitor-claim-row">
+                            ${thumb}
+                            <div style="flex:1; min-width:0;">
+                                <div style="font-size:12px; font-weight:600; color:var(--text-primary);">${c.proofImage ? 'Bukti dari worker — tap gambar buat lihat penuh' : 'Worker tandai selesai tanpa screenshot'}</div>
+                                ${linkLine}
+                                <button class="quick-amount-btn active" style="margin-top:8px;" onclick="approveClaim('${c.id}')">✅ Setujui</button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                return `
+                    <div class="task-card">
+                        <div class="task-header"><span class="task-type">${job.badge}</span><span class="task-price">${formatRupiahSafe(job.displayPrice)}</span></div>
+                        <div class="task-title">${job.title}</div>
+                        <div class="task-detail"><span>${statusLine}</span></div>
+                        ${pendingReviewHTML}
+                        <button class="cancel-btn" style="margin-top:10px;" onclick="closeJob('${job.id}')">🔒 Tutup & Selesaikan Job</button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function openProofPreview(claimId) {
+            const claim = CLAIMS_STATE.find(c => c.id === claimId);
+            if (!claim || !claim.proofImage) return;
+            document.getElementById('proofPreviewImage').src = claim.proofImage;
+            document.getElementById('proofPreviewLinkRow').textContent = claim.proofLink ? `Username/link dari worker: ${claim.proofLink}` : '';
+            document.getElementById('proofPreviewModal').classList.add('active');
+        }
+
+        function approveClaim(claimId) {
+            const claim = CLAIMS_STATE.find(c => c.id === claimId);
+            if (!claim) return;
+            claim.status = 'approved';
+            renderMonitorList();
+        }
+
+        function closeJob(jobId) {
+            const job = JOBS_STATE.find(j => j.id === jobId);
+            if (!job) return;
+            job.status = 'closed';
+            renderJobsList();
+            renderMonitorList();
+        }
+
+        function renderHistoryList() {
+            const container = document.getElementById('historyJobsList');
+            const closedJobs = JOBS_STATE.filter(j => j.status === 'closed');
+
+            if (closedJobs.length === 0) {
+                container.innerHTML = `<div class="empty-state">Belum ada job yang selesai.<br>Job yang kamu tutup lewat Monitor Live bakal muncul di sini.</div>`;
+                return;
+            }
+
+            container.innerHTML = closedJobs.map(job => {
+                const claims = CLAIMS_STATE.filter(c => c.jobId === job.id);
+                const approvedCount = claims.filter(c => c.status === 'approved').length;
+                return `
+                    <div class="task-card" style="opacity:0.75;">
+                        <div class="task-header"><span class="task-type" style="background:#e2e8f0; color:var(--text-secondary);">Selesai</span><span class="task-price">${formatRupiahSafe(job.displayPrice)}</span></div>
+                        <div class="task-title">${job.title}</div>
+                        <div class="task-detail"><span>✅ ${approvedCount} worker disetujui</span></div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Buka modal upload submit — reset state tiap dibuka biar gak kebawa dari submit sebelumnya
+        let currentScreenshotDataUrl = null;
+
+        function openSubmitModal(claimId) {
+            currentSubmittingClaimId = claimId;
+            currentScreenshotDataUrl = null;
+            document.getElementById('submitLinkInput').value = '';
+            resetUploadBox();
+            document.getElementById('submitProofModal').classList.add('active');
+        }
+
+        document.getElementById('btnSubmitProof').addEventListener('click', () => {
+            if (!currentScreenshotDataUrl) {
+                alert('Upload screenshot bukti dulu sebelum kirim ke klien.');
+                return;
+            }
+            document.getElementById('submitProofModal').classList.remove('active');
+            if (currentSubmittingClaimId) {
+                markClaimDone(currentSubmittingClaimId, currentScreenshotDataUrl, document.getElementById('submitLinkInput').value.trim());
+            }
+            // tg?.sendData('submit_proof:completed'); // dimatikan sementara saat testing
+            alert("Bukti berhasil dikirim ke Klien!");
+        });
+
+        renderJobsList();
+        renderSubmitPage();
+        updateClientSubtabsVisibility();
+
+        // Init Supabase: auth user, load jobs & claims dari database
+        (async () => {
+            await initUser();
+            await loadJobsFromDB();
+            await loadClaimsFromDB();
+        })();
+
+        // ===== UPLOAD SCREENSHOT BENERAN (baca file asli, preview, simpan base64 di memori) =====
+        function resetUploadBox() {
+            const uploadArea = document.getElementById('uploadArea');
+            uploadArea.innerHTML = '<span class="upload-icon">📸</span><span style="font-weight: 600;">Tap untuk Upload Screenshot</span>';
+            uploadArea.style.background = '';
+            uploadArea.style.borderColor = '';
+            uploadArea.style.color = '';
+        }
+
+        document.getElementById('uploadArea').addEventListener('click', () => {
+            document.getElementById('proofFileInput').click();
+        });
+
+        document.getElementById('proofFileInput').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            if (!file.type.startsWith('image/')) {
+                alert('File harus berupa gambar (screenshot).');
+                e.target.value = '';
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                currentScreenshotDataUrl = ev.target.result;
+                const uploadArea = document.getElementById('uploadArea');
+                uploadArea.innerHTML = `<img src="${currentScreenshotDataUrl}" alt="Preview screenshot" style="max-width:100%; max-height:160px; object-fit:contain; border-radius:var(--radius-md); display:block; margin:0 auto 8px;"><span style="font-weight:600;">✅ ${file.name} terlampir — tap buat ganti</span>`;
+                uploadArea.style.background = "var(--tosca-soft)";
+                uploadArea.style.borderColor = "var(--accent-tosca)";
+                uploadArea.style.color = "var(--accent-tosca)";
+            };
+            reader.onerror = () => alert('Gagal membaca file. Coba lagi.');
+            reader.readAsDataURL(file);
+            e.target.value = '';
+        });
+
+        // Tab Jobs & Sidebar Animasi
+        const jobsLayout = document.getElementById('jobsLayout');
+        const jobToast = document.getElementById('jobToast');
+        let toastTimeout;
+        const allTabs = ['member', 'referral', 'socmed', 'other'];
+        
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tabId = btn.dataset.tab;
+                const icon = btn.querySelector('.tab-icon').innerText;
+                const text = btn.querySelector('.tab-text').innerText;
+                
+                if (!jobsLayout.classList.contains('sidebar-mode')) {
+                    jobsLayout.classList.add('sidebar-mode');
+                }
+
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                jobToast.innerHTML = `<span style="font-size:24px;">${icon}</span> <span>${text}</span>`;
+                jobToast.classList.add('show');
+                clearTimeout(toastTimeout);
+                toastTimeout = setTimeout(() => { jobToast.classList.remove('show'); }, 300);
+
+                allTabs.forEach(tab => {
+                    const el = document.getElementById(`tasks-${tab}`);
+                    if (el) el.style.display = tab === tabId ? 'block' : 'none';
+                });
+            });
+        });
+
+        // ===== LOGIKA DEPLOY JOB =====
+        const jobTypeSelect = document.getElementById('jobTypeSelect');
+        const memberOrderPanel = document.getElementById('memberOrderPanel');
+        const genericOrderPanel = document.getElementById('genericOrderPanel');
+        const jobTitleInput = document.getElementById('jobTitleInput');
+        const jobAmountInput = document.getElementById('jobAmountInput');
+        const jobAmountError = document.getElementById('jobAmountError');
+        const feeBreakdownBox = document.getElementById('feeBreakdownBox');
+        const jobConfirmBtn = document.getElementById('jobConfirmBtn');
+
+        const targetSelect = document.getElementById('targetSelect');
+        const groupLinkGroup = document.getElementById('groupLinkGroup');
+        const channelLinkGroup = document.getElementById('channelLinkGroup');
+        const groupLinkInput = document.getElementById('groupLinkInput');
+        const channelLinkInput = document.getElementById('channelLinkInput');
+        const memberBudgetInput = document.getElementById('memberBudgetInput');
+        const memberBudgetError = document.getElementById('memberBudgetError');
+        const estPricePerMember = document.getElementById('estPricePerMember');
+        const estMemberCount = document.getElementById('estMemberCount');
+        const antiDupToggle = document.getElementById('antiDupToggle');
+        const antiDupDesc = document.getElementById('antiDupDesc');
+        const antiDupStatus = document.getElementById('antiDupStatus');
+        const antiDupCard = document.getElementById('antiDupCard');
+
+        let selectedJobType = 'member';
+        let selectedTarget = 'grup';
+        let antiDupActivated = false; // status permanen, dicek dari storage
+        let antiDupChecked = false;   // status checkbox di form saat ini
+
+        const ECONOMY = { taskFeePercent: 0.05, taskMinAmount: 10000 };
+        const MEMBER_ECONOMY = { tier1Price: 250, tier2Price: 200, tierThreshold: 50000, antiDupFee: 500 };
+
+        function formatRupiahSafe(num) {
+            if (isNaN(num)) num = 0;
+            return 'Rp ' + Number(num).toLocaleString('id-ID');
+        }
+
+        function renderFeeBreakdown(rows, total) {
+            feeBreakdownBox.innerHTML = rows.map(r =>
+                `<div class="fee-row"><span>${r.label}</span><span>${r.value}</span></div>`
+            ).join('') + `<div class="fee-row total"><span>Total dipotong dari Dompet</span><span>${formatRupiahSafe(total)}</span></div>`;
+        }
+
+        // ===== CEK STATUS ANTI-DUP DARI STORAGE (PERSISTEN PER AKUN) =====
+        async function loadAntiDupStatus() {
+            try {
+                const result = await window.storage.get('anti_dup_active', false);
+                antiDupActivated = !!(result && result.value === '1');
+            } catch (e) {
+                antiDupActivated = false; // belum pernah aktif sebelumnya
+            }
+            renderAntiDupUI();
+        }
+
+        function renderAntiDupUI() {
+            if (antiDupActivated) {
+                antiDupToggle.checked = true;
+                antiDupToggle.disabled = true;
+                antiDupDesc.style.display = 'none';
+                antiDupStatus.style.display = 'block';
+                antiDupCard.classList.add('is-active');
+            } else {
+                antiDupToggle.checked = antiDupChecked;
+                antiDupToggle.disabled = false;
+                antiDupDesc.textContent = 'Cegah worker yang sama join berkali-kali biar order kamu gak "dimakan" orang itu-itu aja. Aktivasi sekali bayar Rp500, berlaku selamanya untuk akun kamu.';
+                antiDupDesc.style.display = 'block';
+                antiDupStatus.style.display = 'none';
+                antiDupCard.classList.remove('is-active');
+            }
+
+            // Anti-dup pakai bot pengawas otomatis -> worker gak perlu kirim SS manual lagi, biar database tetap ringan
+            const ssToggle = document.getElementById('memberRequireSSToggle');
+            const ssDesc = document.getElementById('memberSSDesc');
+            const ssAutoNote = document.getElementById('memberSSAutoNote');
+            const antiDupOnOrPending = antiDupActivated || antiDupChecked;
+            if (antiDupOnOrPending) {
+                ssToggle.checked = false;
+                ssToggle.disabled = true;
+                ssDesc.style.display = 'none';
+                ssAutoNote.style.display = 'block';
+            } else {
+                ssToggle.checked = true;
+                ssToggle.disabled = false;
+                ssDesc.style.display = 'block';
+                ssAutoNote.style.display = 'none';
+            }
+
+            refreshMemberCalc();
+        }
+
+        antiDupToggle.addEventListener('change', (e) => {
+            if (antiDupActivated) return;
+            antiDupChecked = e.target.checked;
+            refreshMemberCalc();
+        });
+
+        loadAntiDupStatus();
+
+        // ===== PILIH TARGET: GRUP / CHANNEL / KEDUANYA =====
+        targetSelect.addEventListener('click', (e) => {
+            const btn = e.target.closest('.target-btn');
+            if (!btn) return;
+            targetSelect.querySelectorAll('.target-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            selectedTarget = btn.dataset.target;
+
+            groupLinkGroup.style.display = (selectedTarget === 'grup' || selectedTarget === 'both') ? 'block' : 'none';
+            channelLinkGroup.style.display = (selectedTarget === 'channel' || selectedTarget === 'both') ? 'block' : 'none';
+            refreshMemberCalc();
+        });
+
+        // ===== KALKULASI ORDER MEMBER (TIER HARGA + ESTIMASI) =====
+        function refreshMemberCalc() {
+            const raw = memberBudgetInput.value.replace(/\D/g, '');
+            const budget = raw ? parseInt(raw, 10) : 0;
+            const pricePerMember = budget < MEMBER_ECONOMY.tierThreshold ? MEMBER_ECONOMY.tier1Price : MEMBER_ECONOMY.tier2Price;
+            const memberCount = budget > 0 ? Math.floor(budget / pricePerMember) : 0;
+
+            estPricePerMember.textContent = formatRupiahSafe(pricePerMember) + ' / member';
+            estMemberCount.textContent = memberCount.toLocaleString('id-ID') + ' member';
+
+            document.querySelectorAll('#memberQuickAmounts .quick-amount-btn').forEach(b => {
+                b.classList.toggle('active', String(budget) === b.dataset.amount);
+            });
+
+            const antiDupFeeApplied = (!antiDupActivated && antiDupChecked) ? MEMBER_ECONOMY.antiDupFee : 0;
+            const platformFee = Math.round(budget * ECONOMY.taskFeePercent); // fee 5% dari bujet member saja
+            const total = budget + antiDupFeeApplied + platformFee;
+
+            const linkOk = selectedTarget === 'grup' ? !!groupLinkInput.value.trim()
+                : selectedTarget === 'channel' ? !!channelLinkInput.value.trim()
+                : (!!groupLinkInput.value.trim() && !!channelLinkInput.value.trim());
+
+            memberBudgetError.classList.toggle('show', raw.length > 0 && budget < ECONOMY.taskMinAmount);
+
+            const rows = [
+                { label: `Bujet member (${memberCount.toLocaleString('id-ID')} member)`, value: formatRupiahSafe(budget) }
+            ];
+            if (antiDupFeeApplied > 0) {
+                rows.push({ label: 'Aktivasi Anti-Duplikat (sekali bayar)', value: formatRupiahSafe(antiDupFeeApplied) });
+            }
+            rows.push({ label: 'Fee platform (5%)', value: formatRupiahSafe(platformFee) });
+            renderFeeBreakdown(rows, budget > 0 ? total : 0);
+
+            const valid = budget >= ECONOMY.taskMinAmount && memberCount > 0 && linkOk;
+            jobConfirmBtn.disabled = !valid;
+            return { budget, pricePerMember, memberCount, antiDupFeeApplied, platformFee, total };
+        }
+
+        memberBudgetInput.addEventListener('input', () => {
+            const digits = memberBudgetInput.value.replace(/\D/g, '');
+            memberBudgetInput.value = digits ? Number(digits).toLocaleString('id-ID') : '';
+            refreshMemberCalc();
+        });
+        document.getElementById('memberQuickAmounts').addEventListener('click', (e) => {
+            const btn = e.target.closest('.quick-amount-btn');
+            if (!btn) return;
+            memberBudgetInput.value = Number(btn.dataset.amount).toLocaleString('id-ID');
+            refreshMemberCalc();
+        });
+        groupLinkInput.addEventListener('input', refreshMemberCalc);
+        channelLinkInput.addEventListener('input', refreshMemberCalc);
+
+        // ===== KALKULASI ORDER GENERIK (REFERRAL / SOCMED / LAINNYA) =====
+        function refreshJobFee() {
+            const raw = jobAmountInput.value.replace(/\D/g, '');
+            const amount = raw ? parseInt(raw, 10) : 0;
+            const fee = Math.round(amount * ECONOMY.taskFeePercent);
+            const total = amount + fee;
+
+            document.querySelectorAll('#jobQuickAmounts .quick-amount-btn').forEach(b => {
+                b.classList.toggle('active', String(amount) === b.dataset.amount);
+            });
+
+            const valid = amount >= ECONOMY.taskMinAmount && jobTitleInput.value.trim().length > 0;
+            jobAmountError.classList.toggle('show', raw.length > 0 && amount < ECONOMY.taskMinAmount);
+
+            renderFeeBreakdown([
+                { label: 'Nominal hadiah worker', value: formatRupiahSafe(amount) },
+                { label: 'Fee platform (5%)', value: formatRupiahSafe(fee) }
+            ], amount > 0 ? total : 0);
+
+            jobConfirmBtn.disabled = !valid;
+            return { amount, fee, total };
+        }
+
+        jobAmountInput.addEventListener('input', () => {
+            const digits = jobAmountInput.value.replace(/\D/g, '');
+            jobAmountInput.value = digits ? Number(digits).toLocaleString('id-ID') : '';
+            refreshJobFee();
+        });
+        jobTitleInput.addEventListener('input', refreshJobFee);
+        document.getElementById('jobQuickAmounts').addEventListener('click', (e) => {
+            const btn = e.target.closest('.quick-amount-btn');
+            if (!btn) return;
+            jobAmountInput.value = Number(btn.dataset.amount).toLocaleString('id-ID');
+            refreshJobFee();
+        });
+
+        // ===== PANEL REFERRAL (2 TIER) =====
+        const referralOrderPanel = document.getElementById('referralOrderPanel');
+        const refTierSelect = document.getElementById('refTierSelect');
+        const refLinkInput = document.getElementById('refLinkInput');
+        const refUsernameInput = document.getElementById('refUsernameInput');
+        const refTier1Fields = document.getElementById('refTier1Fields');
+        const refTier2Fields = document.getElementById('refTier2Fields');
+        const refTier1InstructionInput = document.getElementById('refTier1InstructionInput');
+        const refTier1CountInput = document.getElementById('refTier1CountInput');
+        const refTier2InstructionInput = document.getElementById('refTier2InstructionInput');
+        const refTier2PriceInput = document.getElementById('refTier2PriceInput');
+        const refTier2PriceError = document.getElementById('refTier2PriceError');
+        const refTier2CountInput = document.getElementById('refTier2CountInput');
+        const refEstPrice = document.getElementById('refEstPrice');
+        const refEstCount = document.getElementById('refEstCount');
+        const refEstSubtotal = document.getElementById('refEstSubtotal');
+
+        let selectedRefTier = 1;
+        const REFERRAL_ECONOMY = { tier1Price: 200, tier2MinPrice: 1000 };
+
+        refTierSelect.addEventListener('click', (e) => {
+            const btn = e.target.closest('.ref-tier-btn');
+            if (!btn) return;
+            refTierSelect.querySelectorAll('.ref-tier-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            selectedRefTier = parseInt(btn.dataset.tier, 10);
+
+            refTier1Fields.style.display = selectedRefTier === 1 ? 'block' : 'none';
+            refTier2Fields.style.display = selectedRefTier === 2 ? 'block' : 'none';
+            refreshReferralCalc();
+        });
+
+        function refreshReferralCalc() {
+            let pricePerReferral, targetCount, tierOk;
+
+            if (selectedRefTier === 1) {
+                pricePerReferral = REFERRAL_ECONOMY.tier1Price;
+                const rawCount = refTier1CountInput.value.replace(/\D/g, '');
+                targetCount = rawCount ? parseInt(rawCount, 10) : 0;
+                document.querySelectorAll('#refTier1QuickCount .quick-amount-btn').forEach(b => {
+                    b.classList.toggle('active', String(targetCount) === b.dataset.count);
+                });
+                tierOk = !!refTier1InstructionInput.value.trim() && targetCount > 0;
+            } else {
+                const rawPrice = refTier2PriceInput.value.replace(/\D/g, '');
+                pricePerReferral = rawPrice ? parseInt(rawPrice, 10) : 0;
+                const rawCount = refTier2CountInput.value.replace(/\D/g, '');
+                targetCount = rawCount ? parseInt(rawCount, 10) : 0;
+                refTier2PriceError.classList.toggle('show', rawPrice.length > 0 && pricePerReferral < REFERRAL_ECONOMY.tier2MinPrice);
+                tierOk = !!refTier2InstructionInput.value.trim() && pricePerReferral >= REFERRAL_ECONOMY.tier2MinPrice && targetCount > 0;
+            }
+
+            const subtotal = pricePerReferral * targetCount;
+            const platformFee = Math.round(subtotal * ECONOMY.taskFeePercent);
+            const total = subtotal + platformFee;
+
+            refEstPrice.textContent = formatRupiahSafe(pricePerReferral) + ' / referral';
+            refEstCount.textContent = targetCount.toLocaleString('id-ID') + ' orang';
+            refEstSubtotal.textContent = formatRupiahSafe(subtotal);
+
+            renderFeeBreakdown([
+                { label: `Bayaran worker (${targetCount.toLocaleString('id-ID')} referral)`, value: formatRupiahSafe(subtotal) },
+                { label: 'Fee platform (5%)', value: formatRupiahSafe(platformFee) }
+            ], subtotal > 0 ? total : 0);
+
+            const linkOk = !!refLinkInput.value.trim();
+            const usernameOk = !!refUsernameInput.value.trim();
+            const valid = linkOk && usernameOk && tierOk;
+            jobConfirmBtn.disabled = !valid;
+
+            return { tier: selectedRefTier, pricePerReferral, targetCount, subtotal, platformFee, total };
+        }
+
+        refLinkInput.addEventListener('input', refreshReferralCalc);
+        refUsernameInput.addEventListener('input', refreshReferralCalc);
+        refTier1InstructionInput.addEventListener('input', refreshReferralCalc);
+        refTier1CountInput.addEventListener('input', () => {
+            refTier1CountInput.value = refTier1CountInput.value.replace(/\D/g, '');
+            refreshReferralCalc();
+        });
+        document.getElementById('refTier1QuickCount').addEventListener('click', (e) => {
+            const btn = e.target.closest('.quick-amount-btn');
+            if (!btn) return;
+            refTier1CountInput.value = btn.dataset.count;
+            refreshReferralCalc();
+        });
+        refTier2InstructionInput.addEventListener('input', refreshReferralCalc);
+        refTier2PriceInput.addEventListener('input', () => {
+            const digits = refTier2PriceInput.value.replace(/\D/g, '');
+            refTier2PriceInput.value = digits ? Number(digits).toLocaleString('id-ID') : '';
+            refreshReferralCalc();
+        });
+        refTier2CountInput.addEventListener('input', () => {
+            refTier2CountInput.value = refTier2CountInput.value.replace(/\D/g, '');
+            refreshReferralCalc();
+        });
+
+        // ===== PANEL SOCMED (10 PLATFORM, HARGA PER AKSI) =====
+        const SOCMED_PLATFORMS = [
+            { id: 'tiktok', label: 'TikTok', icon: '🎵', actions: [
+                { id: 'follow', label: 'Follow', price: 200 },
+                { id: 'like', label: 'Like', price: 150 },
+                { id: 'comment', label: 'Comment', price: 300 },
+                { id: 'share', label: 'Share/Repost', price: 200 },
+                { id: 'watch', label: 'Watch Sampai Habis', price: 100 },
+            ]},
+            { id: 'instagram', label: 'Instagram', icon: '📷', actions: [
+                { id: 'follow', label: 'Follow', price: 200 },
+                { id: 'like', label: 'Like', price: 150 },
+                { id: 'comment', label: 'Comment', price: 300 },
+                { id: 'repost', label: 'Repost Story', price: 250 },
+            ]},
+            { id: 'facebook', label: 'Facebook', icon: '📘', actions: [
+                { id: 'follow', label: 'Add Friend/Follow', price: 200 },
+                { id: 'likepage', label: 'Like Halaman', price: 150 },
+                { id: 'likepost', label: 'Like Postingan', price: 150 },
+                { id: 'comment', label: 'Comment', price: 300 },
+                { id: 'share', label: 'Share', price: 200 },
+                { id: 'joingroup', label: 'Join Grup', price: 250 },
+            ]},
+            { id: 'whatsapp', label: 'WhatsApp', icon: '💬', actions: [
+                { id: 'joingroup', label: 'Join Grup', price: 300 },
+                { id: 'joinchannel', label: 'Join Channel', price: 250 },
+            ]},
+            { id: 'x', label: 'X (Twitter)', icon: '✖️', actions: [
+                { id: 'follow', label: 'Follow', price: 200 },
+                { id: 'like', label: 'Like', price: 150 },
+                { id: 'retweet', label: 'Retweet', price: 200 },
+                { id: 'comment', label: 'Comment/Reply', price: 300 },
+            ]},
+            { id: 'youtube', label: 'YouTube', icon: '▶️', actions: [
+                { id: 'subscribe', label: 'Subscribe', price: 300 },
+                { id: 'like', label: 'Like Video', price: 150 },
+                { id: 'comment', label: 'Comment', price: 350 },
+                { id: 'watch', label: 'Watch 5 Menit+', price: 250 },
+            ]},
+            { id: 'shopee', label: 'Shopee', icon: '🛒', actions: [
+                { id: 'followtoko', label: 'Follow Toko', price: 200 },
+                { id: 'wishlist', label: 'Like/Wishlist', price: 150 },
+                { id: 'review', label: 'Review & Rating', price: 1000 },
+            ]},
+            { id: 'threads', label: 'Threads', icon: '🧵', actions: [
+                { id: 'follow', label: 'Follow', price: 200 },
+                { id: 'like', label: 'Like', price: 150 },
+                { id: 'repost', label: 'Repost', price: 200 },
+                { id: 'comment', label: 'Comment', price: 300 },
+            ]},
+            { id: 'xhs', label: 'Xiaohongshu', icon: '📕', actions: [
+                { id: 'follow', label: 'Follow', price: 250 },
+                { id: 'like', label: 'Like', price: 150 },
+                { id: 'comment', label: 'Comment', price: 300 },
+                { id: 'save', label: 'Save/Collect', price: 200 },
+            ]},
+            { id: 'linkedin', label: 'LinkedIn', icon: '💼', actions: [
+                { id: 'connect', label: 'Connect/Follow', price: 350 },
+                { id: 'like', label: 'Like Post', price: 250 },
+                { id: 'comment', label: 'Comment', price: 400 },
+                { id: 'endorse', label: 'Endorse Skill', price: 300 },
+            ]},
+        ];
+
+        const socmedOrderPanel = document.getElementById('socmedOrderPanel');
+        const platformGrid = document.getElementById('platformGrid');
+        const actionChipList = document.getElementById('actionChipList');
+        const socmedTargetInput = document.getElementById('socmedTargetInput');
+        const socmedBudgetInput = document.getElementById('socmedBudgetInput');
+        const socmedBudgetError = document.getElementById('socmedBudgetError');
+        const socmedEstLabel = document.getElementById('socmedEstLabel');
+        const socmedEstPrice = document.getElementById('socmedEstPrice');
+        const socmedEstCount = document.getElementById('socmedEstCount');
+
+        let selectedPlatformId = SOCMED_PLATFORMS[0].id;
+        let selectedActionId = SOCMED_PLATFORMS[0].actions[0].id;
+
+        function getSelectedPlatform() { return SOCMED_PLATFORMS.find(p => p.id === selectedPlatformId); }
+        function getSelectedAction() {
+            const platform = getSelectedPlatform();
+            return platform.actions.find(a => a.id === selectedActionId) || platform.actions[0];
+        }
+
+        function renderPlatformGrid() {
+            platformGrid.innerHTML = SOCMED_PLATFORMS.map(p => `
+                <button class="platform-btn ${p.id === selectedPlatformId ? 'active' : ''}" data-platform="${p.id}">
+                    <span class="platform-icon">${p.icon}</span>
+                    <span class="platform-label">${p.label}</span>
+                </button>
+            `).join('');
+        }
+
+        function renderActionChips() {
+            const platform = getSelectedPlatform();
+            actionChipList.innerHTML = platform.actions.map(a => `
+                <button class="action-chip ${a.id === selectedActionId ? 'active' : ''}" data-action="${a.id}">
+                    <span>${a.label}</span>
+                    <span class="action-chip-price">${formatRupiahSafe(a.price)}</span>
+                </button>
+            `).join('');
+        }
+
+        platformGrid.addEventListener('click', (e) => {
+            const btn = e.target.closest('.platform-btn');
+            if (!btn) return;
+            selectedPlatformId = btn.dataset.platform;
+            selectedActionId = getSelectedPlatform().actions[0].id; // reset ke aksi pertama tiap ganti platform
+            renderPlatformGrid();
+            renderActionChips();
+            refreshSocmedCalc();
+        });
+
+        actionChipList.addEventListener('click', (e) => {
+            const btn = e.target.closest('.action-chip');
+            if (!btn) return;
+            selectedActionId = btn.dataset.action;
+            renderActionChips();
+            refreshSocmedCalc();
+        });
+
+        function refreshSocmedCalc() {
+            const platform = getSelectedPlatform();
+            const action = getSelectedAction();
+            const raw = socmedBudgetInput.value.replace(/\D/g, '');
+            const budget = raw ? parseInt(raw, 10) : 0;
+            const workerCount = budget > 0 ? Math.floor(budget / action.price) : 0;
+
+            document.querySelectorAll('#socmedQuickAmounts .quick-amount-btn').forEach(b => {
+                b.classList.toggle('active', String(budget) === b.dataset.amount);
+            });
+
+            socmedEstLabel.textContent = `${platform.icon} ${platform.label} — ${action.label}`;
+            socmedEstPrice.textContent = formatRupiahSafe(action.price) + ' / aksi';
+            socmedEstCount.textContent = workerCount.toLocaleString('id-ID') + ' worker';
+
+            socmedBudgetError.classList.toggle('show', raw.length > 0 && budget < ECONOMY.taskMinAmount);
+
+            const platformFee = Math.round(budget * ECONOMY.taskFeePercent);
+            const total = budget + platformFee;
+
+            renderFeeBreakdown([
+                { label: `Bujet (${workerCount.toLocaleString('id-ID')} worker x ${formatRupiahSafe(action.price)})`, value: formatRupiahSafe(budget) },
+                { label: 'Fee platform (5%)', value: formatRupiahSafe(platformFee) }
+            ], budget > 0 ? total : 0);
+
+            const valid = budget >= ECONOMY.taskMinAmount && workerCount > 0 && !!socmedTargetInput.value.trim();
+            jobConfirmBtn.disabled = !valid;
+
+            return { platform, action, budget, workerCount, platformFee, total };
+        }
+
+        socmedTargetInput.addEventListener('input', refreshSocmedCalc);
+        socmedBudgetInput.addEventListener('input', () => {
+            const digits = socmedBudgetInput.value.replace(/\D/g, '');
+            socmedBudgetInput.value = digits ? Number(digits).toLocaleString('id-ID') : '';
+            refreshSocmedCalc();
+        });
+        document.getElementById('socmedQuickAmounts').addEventListener('click', (e) => {
+            const btn = e.target.closest('.quick-amount-btn');
+            if (!btn) return;
+            socmedBudgetInput.value = Number(btn.dataset.amount).toLocaleString('id-ID');
+            refreshSocmedCalc();
+        });
+
+        renderPlatformGrid();
+        renderActionChips();
+
+        // ===== PANEL REKBER GAME =====
+        const rekberOrderPanel = document.getElementById('rekberOrderPanel');
+        const rekberTypeGrid = document.getElementById('rekberTypeGrid');
+        const rekberGameInput = document.getElementById('rekberGameInput');
+        const rekberPlatformSelect = document.getElementById('rekberPlatformSelect');
+        const rekberServerInput = document.getElementById('rekberServerInput');
+        const rekberDescInput = document.getElementById('rekberDescInput');
+        const rekberContactInput = document.getElementById('rekberContactInput');
+        const rekberPriceInput = document.getElementById('rekberPriceInput');
+        const rekberPriceError = document.getElementById('rekberPriceError');
+        const rekberEstFee = document.getElementById('rekberEstFee');
+        const rekberAgreeCheck = document.getElementById('rekberAgreeCheck');
+        const rekberHarahetaToggle = document.getElementById('rekberHarahetaToggle');
+
+        rekberHarahetaToggle.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                document.getElementById('harahetaFeeModal').classList.add('active');
+            }
+            refreshRekberCalc();
+        });
+
+        let selectedRekberType = 'jual_akun';
+        let selectedRekberPlatform = 'mobile';
+        const REKBER_ECONOMY = {
+            postFee: 1000, minPrice: 10000,
+            flatFeeThreshold: 100000, flatFeeAmount: 10000,
+            bigFeeThreshold: 1000000, bigFeePercent: 0.05
+        };
+
+        // Tabel fee rekber Tim Haraheta:
+        // < 100rb  -> kelipatan Rp1.000 per Rp10.000 (dibulatkan ke atas)
+        // 100rb - 1jt -> flat Rp10.000
+        // > 1jt -> 5% dari nilai transaksi
+        function calcRekberFee(amount) {
+            if (amount < REKBER_ECONOMY.flatFeeThreshold) {
+                return Math.ceil(amount / 10000) * 1000;
+            } else if (amount <= REKBER_ECONOMY.bigFeeThreshold) {
+                return REKBER_ECONOMY.flatFeeAmount;
+            } else {
+                return Math.round(amount * REKBER_ECONOMY.bigFeePercent);
+            }
+        }
+
+        rekberTypeGrid.addEventListener('click', (e) => {
+            const btn = e.target.closest('.rekber-type-btn');
+            if (!btn) return;
+            rekberTypeGrid.querySelectorAll('.rekber-type-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            selectedRekberType = btn.dataset.type;
+            refreshRekberCalc();
+        });
+
+        rekberPlatformSelect.addEventListener('click', (e) => {
+            const btn = e.target.closest('.quick-amount-btn');
+            if (!btn) return;
+            rekberPlatformSelect.querySelectorAll('.quick-amount-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            selectedRekberPlatform = btn.dataset.platform;
+        });
+
+        function refreshRekberCalc() {
+            const raw = rekberPriceInput.value.replace(/\D/g, '');
+            const price = raw ? parseInt(raw, 10) : 0;
+            const rekberFee = price > 0 ? calcRekberFee(price) : 0;
+
+            rekberEstFee.textContent = formatRupiahSafe(rekberFee);
+            rekberPriceError.classList.toggle('show', raw.length > 0 && price < REKBER_ECONOMY.minPrice);
+
+            renderFeeBreakdown([
+                { label: 'Ongkos post listing', value: formatRupiahSafe(REKBER_ECONOMY.postFee) },
+                { label: 'Estimasi fee rekber (belum dipotong sekarang)', value: formatRupiahSafe(rekberFee) }
+            ], REKBER_ECONOMY.postFee);
+
+            const valid = price >= REKBER_ECONOMY.minPrice
+                && !!rekberGameInput.value.trim()
+                && !!rekberDescInput.value.trim()
+                && !!rekberContactInput.value.trim()
+                && rekberAgreeCheck.checked
+                && rekberHarahetaToggle.checked;
+
+            jobConfirmBtn.disabled = !valid;
+            return { type: selectedRekberType, platform: selectedRekberPlatform, price, rekberFee, postFee: REKBER_ECONOMY.postFee };
+        }
+
+        rekberGameInput.addEventListener('input', refreshRekberCalc);
+        rekberDescInput.addEventListener('input', refreshRekberCalc);
+        rekberContactInput.addEventListener('input', refreshRekberCalc);
+        rekberServerInput.addEventListener('input', refreshRekberCalc);
+        rekberAgreeCheck.addEventListener('change', refreshRekberCalc);
+        rekberPriceInput.addEventListener('input', () => {
+            const digits = rekberPriceInput.value.replace(/\D/g, '');
+            rekberPriceInput.value = digits ? Number(digits).toLocaleString('id-ID') : '';
+            refreshRekberCalc();
+        });
+
+        // ===== GANTI TIPE JOB (MEMBER VS REFERRAL VS SOCMED VS REKBER) =====
+        jobTypeSelect.addEventListener('click', (e) => {
+            const btn = e.target.closest('.job-type-btn');
+            if (!btn) return;
+            jobTypeSelect.querySelectorAll('.job-type-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            selectedJobType = btn.dataset.type;
+
+            const isMember = selectedJobType === 'member';
+            const isReferral = selectedJobType === 'referral';
+            const isSocmed = selectedJobType === 'socmed';
+            const isRekber = selectedJobType === 'rekber';
+            memberOrderPanel.style.display = isMember ? 'block' : 'none';
+            referralOrderPanel.style.display = isReferral ? 'block' : 'none';
+            socmedOrderPanel.style.display = isSocmed ? 'block' : 'none';
+            rekberOrderPanel.style.display = isRekber ? 'block' : 'none';
+            genericOrderPanel.style.display = 'none'; // sudah digantikan panel khusus rekber
+
+            if (isMember) refreshMemberCalc();
+            else if (isReferral) refreshReferralCalc();
+            else if (isSocmed) refreshSocmedCalc();
+            else if (isRekber) refreshRekberCalc();
+        });
+
+        // ===== KONFIRMASI & BAYAR ESCROW =====
+        jobConfirmBtn.addEventListener('click', async () => {
+            if (selectedJobType === 'member') {
+                const calc = refreshMemberCalc();
+                if (calc.budget < ECONOMY.taskMinAmount || calc.memberCount <= 0) return;
+
+                // Jika anti-dup baru diaktifkan kali ini, simpan permanen ke storage
+                if (!antiDupActivated && antiDupChecked) {
+                    try {
+                        const res = await window.storage.set('anti_dup_active', '1', false);
+                        if (res) {
+                            antiDupActivated = true;
+                            // Aktivasi berhasil dibayar -> arahkan ke channel Telegram Satpam Haraheta
+                            window.open('https://t.me/satpamharaheta', '_blank');
+                        }
+                    } catch (err) {
+                        console.error('Gagal menyimpan status Anti-Duplikat:', err);
+                    }
+                }
+
+                const targetLabel = selectedTarget === 'grup' ? 'Grup' : selectedTarget === 'channel' ? 'Channel' : 'Grup + Channel';
+                const linkText = [groupLinkInput.value.trim(), channelLinkInput.value.trim()].filter(Boolean).join(' · ');
+                JOBS_STATE.push({
+                    id: 'job_' + (jobIdCounter++),
+                    jobType: 'member',
+                    badge: `Member ${targetLabel}`,
+                    displayPrice: calc.budget,
+                    title: linkText || `Cari member buat ${targetLabel}`,
+                    detailTags: [`👥 ${calc.memberCount} member`, `Rp${calc.pricePerMember.toLocaleString('id-ID')}/member`].concat(antiDupActivated ? ['🛡️ Anti-Dup'] : []),
+                    requiresSS: memberRequireSSToggle.checked,
+                    status: 'available'
+                });
+                renderJobsList();
+                updateClientSubtabsVisibility();
+
+                alert("Order member berhasil dideploy & langsung muncul di tab Jobs!");
+                // tg?.sendData(`post_job:member:${selectedTarget}:${calc.budget}:${calc.memberCount}:${calc.total}`); // dimatikan saat testing
+                // tg?.close(); // dimatikan saat testing
+
+                memberBudgetInput.value = '';
+                groupLinkInput.value = '';
+                channelLinkInput.value = '';
+                antiDupChecked = false;
+                renderAntiDupUI();
+            } else if (selectedJobType === 'referral') {
+                const calc = refreshReferralCalc();
+                if (calc.subtotal <= 0 || calc.targetCount <= 0) return;
+                if (calc.tier === 2 && calc.pricePerReferral < REFERRAL_ECONOMY.tier2MinPrice) return;
+
+                const title = calc.tier === 1
+                    ? (refTier1InstructionInput.value.trim() || 'Klik & baca link referral')
+                    : (refTier2InstructionInput.value.trim().slice(0, 80) || 'Referral kondisi khusus');
+                JOBS_STATE.push({
+                    id: 'job_' + (jobIdCounter++),
+                    jobType: 'referral',
+                    badge: `Referral Tier ${calc.tier}`,
+                    displayPrice: calc.pricePerReferral,
+                    title,
+                    detailTags: [`🎯 ${calc.targetCount} target`, `Rp${calc.pricePerReferral.toLocaleString('id-ID')}/referral`],
+                    requiresSS: referralRequireSSToggle.checked,
+                    status: 'available'
+                });
+                renderJobsList();
+                updateClientSubtabsVisibility();
+
+                alert("Order referral berhasil dideploy & langsung muncul di tab Jobs!");
+                // tg?.sendData(`post_job:referral:tier${calc.tier}:${calc.pricePerReferral}:${calc.targetCount}:${calc.total}`); // dimatikan saat testing
+                // tg?.close(); // dimatikan saat testing
+
+                refLinkInput.value = '';
+                refUsernameInput.value = '';
+                refTier1InstructionInput.value = '';
+                refTier1CountInput.value = '';
+                refTier2InstructionInput.value = '';
+                refTier2PriceInput.value = '';
+                refTier2CountInput.value = '';
+                refreshReferralCalc();
+            } else if (selectedJobType === 'socmed') {
+                const calc = refreshSocmedCalc();
+                if (calc.budget < ECONOMY.taskMinAmount || calc.workerCount <= 0 || !socmedTargetInput.value.trim()) return;
+
+                JOBS_STATE.push({
+                    id: 'job_' + (jobIdCounter++),
+                    jobType: 'socmed',
+                    badge: `${calc.platform.icon} ${calc.platform.label}`,
+                    displayPrice: calc.action.price,
+                    title: `${calc.action.label} — ${socmedTargetInput.value.trim()}`,
+                    detailTags: [calc.action.label, `${calc.workerCount} slot tersedia`],
+                    requiresSS: socmedRequireSSToggle.checked,
+                    status: 'available'
+                });
+                renderJobsList();
+                updateClientSubtabsVisibility();
+
+                alert("Order socmed berhasil dideploy & langsung muncul di tab Jobs!");
+                // tg?.sendData(`post_job:socmed:${calc.platform.id}:${calc.action.id}:${calc.budget}:${calc.workerCount}:${calc.total}`); // dimatikan saat testing
+                // tg?.close(); // dimatikan saat testing
+
+                socmedTargetInput.value = '';
+                socmedBudgetInput.value = '';
+                refreshSocmedCalc();
+            } else if (selectedJobType === 'rekber') {
+                const calc = refreshRekberCalc();
+                if (calc.price < REKBER_ECONOMY.minPrice || !rekberGameInput.value.trim()
+                    || !rekberDescInput.value.trim() || !rekberContactInput.value.trim()
+                    || !rekberAgreeCheck.checked || !rekberHarahetaToggle.checked) return;
+
+                const typeLabel = selectedRekberType === 'jual_akun' ? '🎮 Jual Akun' : '📦 Jual Item/Currency';
+                const serverTag = rekberServerInput.value.trim() ? `🌐 ${rekberServerInput.value.trim()}` : null;
+                JOBS_STATE.push({
+                    id: 'job_' + (jobIdCounter++),
+                    jobType: 'other',
+                    kind: 'rekber',
+                    badge: typeLabel,
+                    displayPrice: calc.price,
+                    title: `${rekberGameInput.value.trim()} — ${rekberDescInput.value.trim().slice(0, 60)}`,
+                    detailTags: [serverTag, `📞 ${rekberContactInput.value.trim()}`].filter(Boolean),
+                    status: 'available'
+                });
+                renderJobsList();
+                updateClientSubtabsVisibility();
+
+                alert("Listing rekber berhasil di-post & langsung muncul di tab Jobs (Item/Akun Game)! Ongkos post Rp1.000 terpotong.");
+                // tg?.sendData(`post_job:rekber:${calc.type}:${calc.platform}:${calc.price}:${calc.rekberFee}:${calc.postFee}`); // dimatikan saat testing
+                // tg?.close(); // dimatikan saat testing
+
+                rekberGameInput.value = '';
+                rekberServerInput.value = '';
+                rekberDescInput.value = '';
+                rekberContactInput.value = '';
+                rekberPriceInput.value = '';
+                rekberAgreeCheck.checked = false;
+                refreshRekberCalc();
+            } else {
+                const { amount, total } = refreshJobFee();
+                if (amount < ECONOMY.taskMinAmount || !jobTitleInput.value.trim()) return;
+
+                alert("Job berhasil dideploy! Escrow telah dipotong.");
+                // tg?.sendData(`post_job:${selectedJobType}:${amount}:${total}`); // dimatikan saat testing
+                // tg?.close(); // dimatikan saat testing
+
+                jobTitleInput.value = '';
+                jobAmountInput.value = '';
+                refreshJobFee();
+            }
+        });
+
+        // Buka dompet
+        document.getElementById('depositBtn').addEventListener('click', () => document.getElementById('depositModal').classList.add('active'));
+        document.getElementById('withdrawBtn').addEventListener('click', () => document.getElementById('withdrawModal').classList.add('active'));
+        document.getElementById('openReferralModal').addEventListener('click', () => document.getElementById('referralModal').classList.add('active'));
+
+        // Modal Option Click untuk dompet (Demo)
+        document.querySelectorAll('.option-card[data-action]').forEach(card => {
+            card.addEventListener('click', () => {
+                document.getElementById('depositModal').classList.remove('active');
+                document.getElementById('withdrawModal').classList.remove('active');
+                document.getElementById('payInstructionModal').classList.add('active');
+            });
+        });
+    </script>
+</body>
+</html>
