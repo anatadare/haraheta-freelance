@@ -1,31 +1,16 @@
 // ============================================================
 // POST /api/payment/create
-// Generate QRIS (Duitku) atau invoice xRocket (USDT)
+// Generate invoice bayar.gg (QRIS) atau xRocket (USDT)
 // Body: { method: 'qris' | 'xrocket', amount: number, telegram_id: number }
 // ============================================================
 
-const DUITKU_MERCHANT_CODE = process.env.DUITKU_MERCHANT_CODE;
-const DUITKU_API_KEY       = process.env.DUITKU_API_KEY;
-const DUITKU_BASE_URL      = 'https://api-sandbox.duitku.com/api/merchant'; // ganti ke production: https://api-prod.duitku.com/api/merchant
+const BAYARGG_API_KEY      = process.env.BAYARGG_API_KEY;
+const BAYARGG_BASE_URL     = 'https://www.bayar.gg/api';
 const XROCKET_TOKEN        = process.env.XROCKET_TOKEN;
 const INTERNAL_KEY         = process.env.INTERNAL_KEY;
 const SUPABASE_URL         = 'https://uhsotknuawggqbykbxug.supabase.co';
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
 const APP_URL              = 'https://haraheta-freelance.vercel.app';
-
-import crypto from 'crypto';
-
-async function dbPatch(table, query, data) {
-    await fetch(`${SUPABASE_URL}/rest/v1/${table}${query}`, {
-        method: 'PATCH',
-        headers: {
-            'apikey': SUPABASE_SERVICE_KEY,
-            'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(data)
-    });
-}
 
 async function dbPost(table, data) {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
@@ -34,11 +19,14 @@ async function dbPost(table, data) {
             'apikey': SUPABASE_SERVICE_KEY,
             'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
             'Content-Type': 'application/json',
-            'Prefer': 'return=representation'
+            'Prefer': 'return=minimal'
         },
         body: JSON.stringify(data)
     });
-    return res.json();
+    if (!res.ok) {
+        const err = await res.text();
+        throw new Error(`Supabase error: ${err}`);
+    }
 }
 
 export default async function handler(req, res) {
@@ -59,61 +47,57 @@ export default async function handler(req, res) {
     const merchantOrderId = `DEP-${telegram_id}-${Date.now()}`;
 
     try {
-        // ── QRIS via Duitku ──────────────────────────────────────
+        // ── QRIS via bayar.gg ────────────────────────────────────
         if (method === 'qris') {
-            const timestamp    = Date.now();
-            const signatureRaw = `${DUITKU_MERCHANT_CODE}${timestamp}${DUITKU_API_KEY}`;
-            const signature    = crypto.createHash('sha256').update(signatureRaw).digest('hex');
-
             const payload = {
-                merchantCode:    DUITKU_MERCHANT_CODE,
-                paymentAmount:   amount,
-                merchantOrderId,
-                productDetails:  `Deposit Haraheta Freelance`,
-                email:           `user${telegram_id}@haraheta.app`, // email dummy valid
-                paymentMethod:   'SP',   // SP = QRIS di Duitku
-                returnUrl:       `${APP_URL}?deposit=success`,
-                callbackUrl:     `${APP_URL}/api/payment/callback`,
-                signature,
-                expiryPeriod:    10      // menit, QRIS expired dalam 10 menit
+                amount,
+                description:   `Deposit Haraheta Freelance`,
+                customer_name: `User ${telegram_id}`,
+                payment_method: 'qris',           // QRIS Admin, limit Rp500rb
+                payment_url:   'https://www.bayar.gg/pay',
+                callback_url:  `${APP_URL}/api/payment/callback`,
+                redirect_url:  `${APP_URL}?deposit=success`
             };
 
-            const duitkuRes = await fetch(`${DUITKU_BASE_URL}/v2/inquiry`, {
+            const bayarRes = await fetch(`${BAYARGG_BASE_URL}/create-payment.php`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'x-duitku-signature': signature, 'x-duitku-timestamp': String(timestamp), 'x-duitku-merchantcode': DUITKU_MERCHANT_CODE },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-API-Key': BAYARGG_API_KEY
+                },
                 body: JSON.stringify(payload)
             });
-            const duitkuData = await duitkuRes.json();
+            const bayarData = await bayarRes.json();
 
-            if (!duitkuData.paymentUrl && !duitkuData.qrString) {
-                console.error('Duitku error:', duitkuData);
-                return res.status(500).json({ error: 'Gagal generate QRIS', detail: duitkuData });
+            if (!bayarData.success || !bayarData.data) {
+                console.error('bayar.gg error:', bayarData);
+                return res.status(500).json({ error: 'Gagal generate QRIS', detail: bayarData });
             }
 
-            // Simpan transaksi pending ke Supabase
+            const invoice = bayarData.data;
+
+            // Catat transaksi pending ke Supabase (invoice_id sebagai note buat matching di callback)
             await dbPost('transactions', {
-                user_id:      null, // di-resolve dari telegram_id di callback
-                type:         'deposit',
-                amount:       amount,
-                reference_id: null,
-                method:       'qris',
-                note:         merchantOrderId
+                type:   'deposit',
+                amount,
+                method: 'qris',
+                note:   invoice.invoice_id
             });
 
             return res.status(200).json({
-                ok:              true,
-                method:          'qris',
-                merchantOrderId,
-                qr_string:       duitkuData.qrString   || null,
-                qr_url:          duitkuData.paymentUrl  || null,
+                ok:           true,
+                method:       'qris',
+                invoice_id:   invoice.invoice_id,
+                payment_url:  invoice.payment_url,
+                qr_string:    invoice.qris_string || null,
+                final_amount: invoice.final_amount,
                 amount
             });
         }
 
         // ── xRocket (USDT) ───────────────────────────────────────
         if (method === 'xrocket') {
-            // Konversi IDR → USDT (rate kasar, idealnya ambil dari API rate live)
-            const usdtAmount = (amount / 16300).toFixed(2); // ~Rp16.300/USDT
+            const usdtAmount = (amount / 16300).toFixed(2);
 
             const xrocketRes = await fetch('https://pay.xrocket.tg/tg-invoices', {
                 method: 'POST',
@@ -125,7 +109,7 @@ export default async function handler(req, res) {
                     currency:    'USDT',
                     amount:      usdtAmount,
                     description: `Deposit Haraheta Freelance (Rp${amount.toLocaleString('id-ID')})`,
-                    payload:     `${telegram_id}:${merchantOrderId}:${amount}`,  // buat tracking di callback
+                    payload:     `${telegram_id}:${merchantOrderId}:${amount}`,
                     callbackUrl: `${APP_URL}/api/payment/callback`
                 })
             });
@@ -137,12 +121,11 @@ export default async function handler(req, res) {
             }
 
             return res.status(200).json({
-                ok:              true,
-                method:          'xrocket',
-                merchantOrderId,
-                invoice_url:     xrocketData.result.link,
-                usdt_amount:     usdtAmount,
-                idr_amount:      amount
+                ok:           true,
+                method:       'xrocket',
+                invoice_url:  xrocketData.result.link,
+                usdt_amount:  usdtAmount,
+                idr_amount:   amount
             });
         }
 
