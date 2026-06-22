@@ -1229,6 +1229,28 @@
         };
 
         // ============================================================
+        // NOTIFIKASI TELEGRAM — Lewat /api/notify (server-side)
+        // Token bot TIDAK ada di sini, aman disimpan di Vercel env var
+        // ============================================================
+        const INTERNAL_KEY = 'haraheta-internal-2024'; // ganti ini di Vercel env var juga
+
+        async function sendNotification(type, data) {
+            try {
+                await fetch('/api/notify', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-internal-key': INTERNAL_KEY
+                    },
+                    body: JSON.stringify({ type, data })
+                });
+            } catch (err) {
+                console.error('sendNotification error:', err);
+                // Notifikasi gagal tidak boleh hentikan alur utama
+            }
+        }
+
+        // ============================================================
         // AUTH — Ambil data user dari Telegram, upsert ke Supabase
         // ============================================================
         let CURRENT_USER = null;
@@ -1380,6 +1402,15 @@
             renderJobsList();
             renderSubmitPage();
 
+            // Notif ke client bahwa ada worker yang ambil jobnya
+            if (job.clientTelegramId) {
+                sendNotification('job_claimed', {
+                    client_telegram_id: job.clientTelegramId,
+                    worker_username: CURRENT_USER?.username || 'anonymous',
+                    job_title: job.title
+                });
+            }
+
             alert(`Tugas "${job.title}" berhasil diambil! Cek tab Submit buat lapor bukti.`);
             document.querySelector('.nav-item[data-page="page-submit"]').click();
         }
@@ -1523,6 +1554,16 @@
             const claim = CLAIMS_STATE.find(c => c.id === claimId);
             if (!claim) return;
             claim.status = 'approved';
+
+            // Notif ke worker bahwa buktinya disetujui
+            if (claim.workerTelegramId) {
+                sendNotification('claim_approved', {
+                    worker_telegram_id: claim.workerTelegramId,
+                    job_title: claim.job.title,
+                    amount: claim.job.displayPrice
+                });
+            }
+
             renderMonitorList();
         }
 
@@ -1530,6 +1571,18 @@
             const job = JOBS_STATE.find(j => j.id === jobId);
             if (!job) return;
             job.status = 'closed';
+
+            // Notif ke semua worker yang approved bahwa job ditutup
+            const approvedWorkerIds = CLAIMS_STATE
+                .filter(c => c.jobId === jobId && c.status === 'approved' && c.workerTelegramId)
+                .map(c => c.workerTelegramId);
+            if (approvedWorkerIds.length > 0) {
+                sendNotification('job_closed', {
+                    worker_telegram_ids: approvedWorkerIds,
+                    job_title: job.title
+                });
+            }
+
             renderJobsList();
             renderMonitorList();
         }
@@ -1574,7 +1627,18 @@
             }
             document.getElementById('submitProofModal').classList.remove('active');
             if (currentSubmittingClaimId) {
+                const claim = CLAIMS_STATE.find(c => c.id === currentSubmittingClaimId);
                 markClaimDone(currentSubmittingClaimId, currentScreenshotDataUrl, document.getElementById('submitLinkInput').value.trim());
+
+                // Notif ke client bahwa ada bukti masuk
+                if (claim?.job?.clientTelegramId) {
+                    sendNotification('proof_submitted', {
+                        client_telegram_id: claim.job.clientTelegramId,
+                        worker_username: CURRENT_USER?.username || 'anonymous',
+                        job_title: claim.job.title,
+                        mini_app_url: 'https://haraheta-freelance.vercel.app'
+                    });
+                }
             }
             // tg?.sendData('submit_proof:completed'); // dimatikan sementara saat testing
             alert("Bukti berhasil dikirim ke Klien!");
@@ -2253,6 +2317,12 @@
                             antiDupActivated = true;
                             // Aktivasi berhasil dibayar -> arahkan ke channel Telegram Satpam Haraheta
                             window.open('https://t.me/satpamharaheta', '_blank');
+                            // Kirim notif konfirmasi ke user
+                            if (CURRENT_USER?.telegram_id) {
+                                sendNotification('antidup_activated', {
+                                    user_telegram_id: CURRENT_USER.telegram_id
+                                });
+                            }
                         }
                     } catch (err) {
                         console.error('Gagal menyimpan status Anti-Duplikat:', err);
