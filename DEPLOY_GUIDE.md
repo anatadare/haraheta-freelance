@@ -4,7 +4,7 @@
 1. Buat repo baru di github.com (nama: haraheta-freelance)
 2. Upload 2 file ini: index.html + vercel.json
 3. Commit & push
-
+ .
 ## Langkah 2: Connect ke Vercel
 1. Buka vercel.com → New Project
 2. Import repo GitHub tadi
