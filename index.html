@@ -1406,28 +1406,34 @@
             alert("Untuk transaksi ini, hubungi Tim Haraheta lewat Dompet/Support buat proses rekber. (Demo: belum terhubung ke admin sungguhan)");
         }
 
-        function claimJob(jobId) {
+        // ===== DB: CLAIM JOB =====
+        async function claimJob(jobId) {
             const job = JOBS_STATE.find(j => j.id === jobId);
             if (!job) return;
-            job.status = 'claimed';
-
-            const claim = { id: 'claim_' + (claimIdCounter++), jobId: job.id, job, status: 'active' };
-            CLAIMS_STATE.push(claim);
-
-            renderJobsList();
-            renderSubmitPage();
-
-            // Notif ke client bahwa ada worker yang ambil jobnya
-            if (job.clientTelegramId) {
-                sendNotification('job_claimed', {
-                    client_telegram_id: job.clientTelegramId,
-                    worker_username: CURRENT_USER?.username || 'anonymous',
-                    job_title: job.title
-                });
+            if (!CURRENT_USER?.id) { alert('Login lewat Telegram dulu ya.'); return; }
+            if (job.clientId === CURRENT_USER.id) {
+                alert('Kamu tidak bisa mengambil job yang kamu deploy sendiri.');
+                return;
             }
-
-            alert(`Tugas "${job.title}" berhasil diambil! Cek tab Submit buat lapor bukti.`);
-            document.querySelector('.nav-item[data-page="page-submit"]').click();
+            try {
+                const result = await db.post('claims', { job_id: jobId, worker_id: CURRENT_USER.id, status: 'active' });
+                const newClaim = result[0];
+                await db.patch('jobs', `?id=eq.${jobId}`, { status: 'claimed' });
+                job.status = 'claimed';
+                const claim = { id: newClaim.id, jobId: job.id, job, status: 'active', workerTelegramId: CURRENT_USER.telegram_id };
+                CLAIMS_STATE.push(claim);
+                renderJobsList();
+                renderSubmitPage();
+                if (job.clientTelegramId) {
+                    sendNotification('job_claimed', { client_telegram_id: job.clientTelegramId, worker_username: CURRENT_USER.username || 'anonymous', job_title: job.title });
+                }
+                alert(`Tugas "${job.title}" berhasil diambil! Cek tab Submit buat lapor bukti.`);
+                document.querySelector('.nav-item[data-page="page-submit"]').click();
+            } catch (err) {
+                console.error('claimJob error:', err);
+                if (err.code === '23505') { alert('Kamu sudah pernah mengambil job ini.'); }
+                else { alert('Gagal mengambil job. Coba lagi.'); }
+            }
         }
 
         function renderActiveClaimCard(claim) {
@@ -1472,12 +1478,26 @@
             doneContainer.innerHTML = dones.map(renderDoneClaimCard).join('');
         }
 
-        function markClaimDone(claimId, proofImageData, proofLink) {
+        // ===== DB: SUBMIT BUKTI =====
+        async function markClaimDone(claimId, proofImageData, proofLink) {
             const claim = CLAIMS_STATE.find(c => c.id === claimId);
             if (!claim) return;
-            claim.status = 'submitted';
-            claim.proofImage = proofImageData || null;
-            claim.proofLink = proofLink || '';
+            try {
+                let proofImageUrl = null;
+                if (proofImageData) { proofImageUrl = await db.uploadProof(claimId, proofImageData); }
+                await db.patch('claims', `?id=eq.${claimId}`, {
+                    status: 'submitted', proof_image_url: proofImageUrl,
+                    proof_link: proofLink || null, submitted_at: new Date().toISOString()
+                });
+                claim.status = 'submitted';
+                claim.proofImage = proofImageUrl || proofImageData || null;
+                claim.proofLink = proofLink || '';
+            } catch (err) {
+                console.error('markClaimDone error:', err);
+                claim.status = 'submitted';
+                claim.proofImage = proofImageData || null;
+                claim.proofLink = proofLink || '';
+            }
             currentSubmittingClaimId = null;
             renderSubmitPage();
         }
@@ -1565,41 +1585,55 @@
             document.getElementById('proofPreviewModal').classList.add('active');
         }
 
-        function approveClaim(claimId) {
+        // ===== DB: APPROVE CLAIM + BAYAR WORKER =====
+        async function approveClaim(claimId) {
             const claim = CLAIMS_STATE.find(c => c.id === claimId);
             if (!claim) return;
-            claim.status = 'approved';
-
-            // Notif ke worker bahwa buktinya disetujui
-            if (claim.workerTelegramId) {
-                sendNotification('claim_approved', {
-                    worker_telegram_id: claim.workerTelegramId,
-                    job_title: claim.job.title,
-                    amount: claim.job.displayPrice
-                });
+            try {
+                await db.patch('claims', `?id=eq.${claimId}`, { status: 'approved', reviewed_at: new Date().toISOString() });
+                if (claim.workerTelegramId) {
+                    const workers = await db.get('users', `?telegram_id=eq.${claim.workerTelegramId}&limit=1`);
+                    const worker = workers[0];
+                    if (worker) {
+                        await db.patch('users', `?id=eq.${worker.id}`, {
+                            balance_idr: worker.balance_idr + claim.job.displayPrice,
+                            total_jobs_done: (worker.total_jobs_done || 0) + 1
+                        });
+                        await db.post('transactions', {
+                            user_id: worker.id, type: 'worker_pay',
+                            amount: claim.job.displayPrice, reference_id: claim.jobId,
+                            note: `Bayaran job: ${claim.job.title}`
+                        });
+                    }
+                    sendNotification('claim_approved', { worker_telegram_id: claim.workerTelegramId, job_title: claim.job.title, amount: claim.job.displayPrice });
+                }
+                claim.status = 'approved';
+                renderMonitorList();
+            } catch (err) {
+                console.error('approveClaim error:', err);
+                alert('Gagal menyetujui bukti. Coba lagi.');
             }
-
-            renderMonitorList();
         }
 
-        function closeJob(jobId) {
+        // ===== DB: CLOSE JOB =====
+        async function closeJob(jobId) {
             const job = JOBS_STATE.find(j => j.id === jobId);
             if (!job) return;
-            job.status = 'closed';
-
-            // Notif ke semua worker yang approved bahwa job ditutup
-            const approvedWorkerIds = CLAIMS_STATE
-                .filter(c => c.jobId === jobId && c.status === 'approved' && c.workerTelegramId)
-                .map(c => c.workerTelegramId);
-            if (approvedWorkerIds.length > 0) {
-                sendNotification('job_closed', {
-                    worker_telegram_ids: approvedWorkerIds,
-                    job_title: job.title
-                });
+            try {
+                await db.patch('jobs', `?id=eq.${jobId}`, { status: 'closed', closed_at: new Date().toISOString() });
+                const approvedWorkerIds = CLAIMS_STATE
+                    .filter(c => c.jobId === jobId && c.status === 'approved' && c.workerTelegramId)
+                    .map(c => c.workerTelegramId);
+                if (approvedWorkerIds.length > 0) {
+                    sendNotification('job_closed', { worker_telegram_ids: approvedWorkerIds, job_title: job.title });
+                }
+                job.status = 'closed';
+                renderJobsList();
+                renderMonitorList();
+            } catch (err) {
+                console.error('closeJob error:', err);
+                alert('Gagal menutup job. Coba lagi.');
             }
-
-            renderJobsList();
-            renderMonitorList();
         }
 
         function renderHistoryList() {
@@ -2319,6 +2353,34 @@
         });
 
         // ===== KONFIRMASI & BAYAR ESCROW =====
+                // ===== DB: DEPLOY JOB → INSERT + potong saldo =====
+        async function deployJobToDB(jobData) {
+            if (!CURRENT_USER?.id) { alert('Login lewat Telegram dulu ya.'); return null; }
+            const totalDeduct = (jobData.total_budget || 0) + (jobData.platform_fee || 0);
+            if (CURRENT_USER.balance_idr < totalDeduct) {
+                alert(`Saldo tidak cukup. Dibutuhkan ${formatRupiahSafe(totalDeduct)}, saldo kamu ${formatRupiahSafe(CURRENT_USER.balance_idr)}.`);
+                return null;
+            }
+            try {
+                const result = await db.post('jobs', { ...jobData, client_id: CURRENT_USER.id, status: 'available' });
+                const newJob = result[0];
+                const newBalance = CURRENT_USER.balance_idr - totalDeduct;
+                await db.patch('users', `?id=eq.${CURRENT_USER.id}`, { balance_idr: newBalance });
+                await db.post('transactions', {
+                    user_id: CURRENT_USER.id, type: 'escrow_lock',
+                    amount: -totalDeduct, reference_id: newJob.id,
+                    note: `Escrow job: ${jobData.title}`
+                });
+                CURRENT_USER.balance_idr = newBalance;
+                renderProfileUI();
+                return newJob;
+            } catch (err) {
+                console.error('deployJobToDB error:', err);
+                alert('Gagal mendeploy job. Coba lagi.');
+                return null;
+            }
+        }
+
         jobConfirmBtn.addEventListener('click', async () => {
             if (selectedJobType === 'member') {
                 const calc = refreshMemberCalc();
@@ -2330,13 +2392,13 @@
                         const res = await window.storage.set('anti_dup_active', '1', false);
                         if (res) {
                             antiDupActivated = true;
-                            // Aktivasi berhasil dibayar -> arahkan ke channel Telegram Satpam Haraheta
+                            // Update kolom anti_dup_active di Supabase
+                            if (CURRENT_USER?.id) {
+                                db.patch('users', `?id=eq.${CURRENT_USER.id}`, { anti_dup_active: true }).catch(console.error);
+                            }
                             window.open('https://t.me/satpamharaheta', '_blank');
-                            // Kirim notif konfirmasi ke user
                             if (CURRENT_USER?.telegram_id) {
-                                sendNotification('antidup_activated', {
-                                    user_telegram_id: CURRENT_USER.telegram_id
-                                });
+                                sendNotification('antidup_activated', { user_telegram_id: CURRENT_USER.telegram_id });
                             }
                         }
                     } catch (err) {
@@ -2346,19 +2408,24 @@
 
                 const targetLabel = selectedTarget === 'grup' ? 'Grup' : selectedTarget === 'channel' ? 'Channel' : 'Grup + Channel';
                 const linkText = [groupLinkInput.value.trim(), channelLinkInput.value.trim()].filter(Boolean).join(' · ');
-                JOBS_STATE.push({
-                    id: 'job_' + (jobIdCounter++),
-                    jobType: 'member',
-                    badge: `Member ${targetLabel}`,
-                    displayPrice: calc.budget,
+                const memberJobData = {
+                    job_type: 'member', badge: `Member ${targetLabel}`,
+                    display_price: calc.budget, total_budget: calc.budget, platform_fee: calc.platformFee || 0,
                     title: linkText || `Cari member buat ${targetLabel}`,
-                    detailTags: [`👥 ${calc.memberCount} member`, `Rp${calc.pricePerMember.toLocaleString('id-ID')}/member`].concat(antiDupActivated ? ['🛡️ Anti-Dup'] : []),
-                    requiresSS: memberRequireSSToggle.checked,
-                    status: 'available'
-                });
+                    detail_tags: [`👥 ${calc.memberCount} member`, `Rp${calc.pricePerMember.toLocaleString('id-ID')}/member`].concat(antiDupActivated ? ['🛡️ Anti-Dup'] : []),
+                    requires_ss: memberRequireSSToggle.checked, anti_dup: antiDupActivated,
+                    target_type: selectedTarget, group_link: groupLinkInput.value.trim() || null,
+                    channel_link: channelLinkInput.value.trim() || null,
+                    member_count: calc.memberCount, price_per_member: calc.pricePerMember
+                };
+                const newMemberJob = await deployJobToDB(memberJobData);
+                if (!newMemberJob) return;
+                JOBS_STATE.push({ id: newMemberJob.id, jobType: 'member', badge: memberJobData.badge,
+                    displayPrice: calc.budget, title: memberJobData.title, detailTags: memberJobData.detail_tags,
+                    requiresSS: memberJobData.requires_ss, status: 'available', clientId: CURRENT_USER.id,
+                    clientTelegramId: CURRENT_USER.telegram_id });
                 renderJobsList();
                 updateClientSubtabsVisibility();
-
                 alert("Order member berhasil dideploy & langsung muncul di tab Jobs!");
                 // tg?.sendData(`post_job:member:${selectedTarget}:${calc.budget}:${calc.memberCount}:${calc.total}`); // dimatikan saat testing
                 // tg?.close(); // dimatikan saat testing
@@ -2376,19 +2443,22 @@
                 const title = calc.tier === 1
                     ? (refTier1InstructionInput.value.trim() || 'Klik & baca link referral')
                     : (refTier2InstructionInput.value.trim().slice(0, 80) || 'Referral kondisi khusus');
-                JOBS_STATE.push({
-                    id: 'job_' + (jobIdCounter++),
-                    jobType: 'referral',
-                    badge: `Referral Tier ${calc.tier}`,
-                    displayPrice: calc.pricePerReferral,
-                    title,
-                    detailTags: [`🎯 ${calc.targetCount} target`, `Rp${calc.pricePerReferral.toLocaleString('id-ID')}/referral`],
-                    requiresSS: referralRequireSSToggle.checked,
-                    status: 'available'
-                });
+                const refJobData = {
+                    job_type: 'referral', badge: `Referral Tier ${calc.tier}`,
+                    display_price: calc.pricePerReferral, total_budget: calc.subtotal, platform_fee: Math.round(calc.subtotal * 0.05),
+                    title, detail_tags: [`🎯 ${calc.targetCount} target`, `Rp${calc.pricePerReferral.toLocaleString('id-ID')}/referral`],
+                    requires_ss: referralRequireSSToggle.checked, ref_tier: calc.tier,
+                    ref_link: refLinkInput.value.trim(), ref_instruction: title,
+                    ref_count: calc.targetCount, ref_price_per: calc.pricePerReferral
+                };
+                const newRefJob = await deployJobToDB(refJobData);
+                if (!newRefJob) return;
+                JOBS_STATE.push({ id: newRefJob.id, jobType: 'referral', badge: refJobData.badge,
+                    displayPrice: calc.pricePerReferral, title, detailTags: refJobData.detail_tags,
+                    requiresSS: refJobData.requires_ss, status: 'available', clientId: CURRENT_USER.id,
+                    clientTelegramId: CURRENT_USER.telegram_id });
                 renderJobsList();
                 updateClientSubtabsVisibility();
-
                 alert("Order referral berhasil dideploy & langsung muncul di tab Jobs!");
                 // tg?.sendData(`post_job:referral:tier${calc.tier}:${calc.pricePerReferral}:${calc.targetCount}:${calc.total}`); // dimatikan saat testing
                 // tg?.close(); // dimatikan saat testing
@@ -2405,19 +2475,23 @@
                 const calc = refreshSocmedCalc();
                 if (calc.budget < ECONOMY.taskMinAmount || calc.workerCount <= 0 || !socmedTargetInput.value.trim()) return;
 
-                JOBS_STATE.push({
-                    id: 'job_' + (jobIdCounter++),
-                    jobType: 'socmed',
-                    badge: `${calc.platform.icon} ${calc.platform.label}`,
-                    displayPrice: calc.action.price,
-                    title: `${calc.action.label} — ${socmedTargetInput.value.trim()}`,
-                    detailTags: [calc.action.label, `${calc.workerCount} slot tersedia`],
-                    requiresSS: socmedRequireSSToggle.checked,
-                    status: 'available'
-                });
+                const socTitle = `${calc.action.label} — ${socmedTargetInput.value.trim()}`;
+                const socJobData = {
+                    job_type: 'socmed', badge: `${calc.platform.icon} ${calc.platform.label}`,
+                    display_price: calc.action.price, total_budget: calc.budget, platform_fee: Math.round(calc.budget * 0.05),
+                    title: socTitle, detail_tags: [calc.action.label, `${calc.workerCount} slot tersedia`],
+                    requires_ss: socmedRequireSSToggle.checked,
+                    socmed_platform: calc.platform.id, socmed_action: calc.action.id,
+                    socmed_target: socmedTargetInput.value.trim()
+                };
+                const newSocJob = await deployJobToDB(socJobData);
+                if (!newSocJob) return;
+                JOBS_STATE.push({ id: newSocJob.id, jobType: 'socmed', badge: socJobData.badge,
+                    displayPrice: calc.action.price, title: socTitle, detailTags: socJobData.detail_tags,
+                    requiresSS: socJobData.requires_ss, status: 'available', clientId: CURRENT_USER.id,
+                    clientTelegramId: CURRENT_USER.telegram_id });
                 renderJobsList();
                 updateClientSubtabsVisibility();
-
                 alert("Order socmed berhasil dideploy & langsung muncul di tab Jobs!");
                 // tg?.sendData(`post_job:socmed:${calc.platform.id}:${calc.action.id}:${calc.budget}:${calc.workerCount}:${calc.total}`); // dimatikan saat testing
                 // tg?.close(); // dimatikan saat testing
@@ -2433,19 +2507,23 @@
 
                 const typeLabel = selectedRekberType === 'jual_akun' ? '🎮 Jual Akun' : '📦 Jual Item/Currency';
                 const serverTag = rekberServerInput.value.trim() ? `🌐 ${rekberServerInput.value.trim()}` : null;
-                JOBS_STATE.push({
-                    id: 'job_' + (jobIdCounter++),
-                    jobType: 'other',
-                    kind: 'rekber',
-                    badge: typeLabel,
-                    displayPrice: calc.price,
-                    title: `${rekberGameInput.value.trim()} — ${rekberDescInput.value.trim().slice(0, 60)}`,
-                    detailTags: [serverTag, `📞 ${rekberContactInput.value.trim()}`].filter(Boolean),
-                    status: 'available'
-                });
+                const rkTitle = `${rekberGameInput.value.trim()} — ${rekberDescInput.value.trim().slice(0, 60)}`;
+                const rkJobData = {
+                    job_type: 'rekber', badge: typeLabel, display_price: calc.price,
+                    total_budget: REKBER_ECONOMY.postFee, platform_fee: 0,
+                    title: rkTitle, detail_tags: [serverTag, `📞 ${rekberContactInput.value.trim()}`].filter(Boolean),
+                    requires_ss: false, rekber_type: selectedRekberType,
+                    rekber_game: rekberGameInput.value.trim(), rekber_server: rekberServerInput.value.trim() || null,
+                    rekber_contact: rekberContactInput.value.trim(), rekber_price: calc.price, rekber_fee: calc.rekberFee
+                };
+                const newRkJob = await deployJobToDB(rkJobData);
+                if (!newRkJob) return;
+                JOBS_STATE.push({ id: newRkJob.id, jobType: 'other', kind: 'rekber', badge: typeLabel,
+                    displayPrice: calc.price, title: rkTitle, detailTags: rkJobData.detail_tags,
+                    requiresSS: false, status: 'available', clientId: CURRENT_USER.id,
+                    clientTelegramId: CURRENT_USER.telegram_id });
                 renderJobsList();
                 updateClientSubtabsVisibility();
-
                 alert("Listing rekber berhasil di-post & langsung muncul di tab Jobs (Item/Akun Game)! Ongkos post Rp1.000 terpotong.");
                 // tg?.sendData(`post_job:rekber:${calc.type}:${calc.platform}:${calc.price}:${calc.rekberFee}:${calc.postFee}`); // dimatikan saat testing
                 // tg?.close(); // dimatikan saat testing
@@ -2476,12 +2554,7 @@
         document.getElementById('withdrawBtn').addEventListener('click', () => document.getElementById('withdrawModal').classList.add('active'));
         document.getElementById('openReferralModal').addEventListener('click', () => document.getElementById('referralModal').classList.add('active'));
 
-        // Buka dompet
-        document.getElementById('depositBtn').addEventListener('click', () => document.getElementById('depositModal').classList.add('active'));
-        document.getElementById('withdrawBtn').addEventListener('click', () => document.getElementById('withdrawModal').classList.add('active'));
-        document.getElementById('openReferralModal').addEventListener('click', () => document.getElementById('referralModal').classList.add('active'));
-
-        // ===== PAYMENT — Deposit via QRIS (Duitku) / xRocket =====
+        // ===== PAYMENT — Deposit via QRIS (bayar.gg) / xRocket =====
         let currentPayMethod = null;
 
         // Input nominal
