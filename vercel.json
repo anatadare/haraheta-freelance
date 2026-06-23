@@ -2,10 +2,22 @@
   "version": 2,
   "builds": [
     { "src": "index.html", "use": "@vercel/static" },
-    { "src": "api/**/*.js", "use": "@vercel/node" }
+    { "src": "api/notify.js", "use": "@vercel/node" },
+    { "src": "api/webhook.js", "use": "@vercel/node" },
+    { "src": "api/auth/verify.js", "use": "@vercel/node" },
+    { "src": "api/payment/create.js", "use": "@vercel/node" },
+    { "src": "api/payment/callback.js", "use": "@vercel/node" },
+    { "src": "api/payment/withdraw.js", "use": "@vercel/node" },
+    { "src": "api/referral/track.js", "use": "@vercel/node" }
   ],
   "routes": [
-    { "src": "/api/(.*)", "dest": "/api/$1" },
+    { "src": "/api/auth/verify", "dest": "/api/auth/verify.js" },
+    { "src": "/api/payment/create", "dest": "/api/payment/create.js" },
+    { "src": "/api/payment/callback", "dest": "/api/payment/callback.js" },
+    { "src": "/api/payment/withdraw", "dest": "/api/payment/withdraw.js" },
+    { "src": "/api/referral/track", "dest": "/api/referral/track.js" },
+    { "src": "/api/notify", "dest": "/api/notify.js" },
+    { "src": "/api/webhook", "dest": "/api/webhook.js" },
     { "src": "/(.*)", "dest": "/index.html" }
   ],
   "headers": [
