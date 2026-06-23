@@ -1078,71 +1078,117 @@
         <div class="page" id="page-wallet">
             <div class="balance-card">
                 <div class="balance-label">Saldo Tersedia</div>
-                <div class="balance-amount">Rp 10.000.000</div>
-                <div class="balance-idr">≈ 611 USDT</div>
+                <div class="balance-amount" id="walletBalanceAmount">Rp 0</div>
+                <div class="balance-idr" id="walletBalanceUsdt">≈ 0 USDT</div>
                 <div class="action-row">
                     <button class="btn-action btn-deposit" id="depositBtn">➕ Deposit</button>
                     <button class="btn-action btn-withdraw" id="withdrawBtn">💸 Withdraw</button>
                 </div>
             </div>
-            
-            <div class="section-title" style="margin-top: 16px;">📋 Transaksi Terakhir</div>
-            <div class="tx-list">
-                <div class="tx-item">
-                    <div class="tx-info"><span class="tx-title">Withdraw via QRIS</span><span class="tx-date">Hari ini, 14:30</span></div>
-                    <span class="tx-amount minus">-Rp 100.000</span>
-                </div>
-                <div class="tx-item">
-                    <div class="tx-info"><span class="tx-title">Deposit via xRocket</span><span class="tx-date">Kemarin, 10:15</span></div>
-                    <span class="tx-amount plus">+Rp 200.000</span>
-                </div>
+
+            <div class="section-title" style="margin-top:16px;">📋 Transaksi Terakhir</div>
+            <div class="tx-list" id="txList">
+                <div class="empty-state" style="padding:20px;">Belum ada transaksi.</div>
             </div>
 
-            <!-- Modal Metode Pembayaran (Sama seperti sebelumnya, disembunyikan isinya biar kode ringkas, tapi ID tetap sama) -->
+            <!-- Modal Deposit -->
             <div class="modal-overlay" id="depositModal">
                 <div class="modal-sheet">
-                    <h3>Deposit via</h3>
-                    <div class="option-card" data-method="qris_seabank" data-label="QRIS Seabank" data-icon="🏦" data-sub="Instan, bebas biaya" data-action="deposit"><div class="option-left"><div class="option-icon">🏦</div><div class="option-text">QRIS Seabank<small>Instan, bebas biaya</small></div></div><span>›</span></div>
-                    <div class="option-card" data-method="xrocket" data-label="xRocket" data-icon="🚀" data-sub="Crypto, USDT" data-action="deposit"><div class="option-left"><div class="option-icon">🚀</div><div class="option-text">xRocket<small>Crypto, USDT</small></div></div><span>›</span></div>
+                    <h3>➕ Deposit via</h3>
+                    <div class="option-card" data-action="deposit" data-method="qris">
+                        <div class="option-left"><div class="option-icon">🏦</div><div class="option-text">QRIS<small>Instan · max Rp500.000</small></div></div><span>›</span>
+                    </div>
+                    <div class="option-card" data-action="deposit" data-method="xrocket">
+                        <div class="option-left"><div class="option-icon">🚀</div><div class="option-text">xRocket<small>Crypto USDT · tanpa limit</small></div></div><span>›</span>
+                    </div>
                     <button class="cancel-btn" onclick="document.getElementById('depositModal').classList.remove('active')">Batal</button>
                 </div>
             </div>
+
+            <!-- Modal Withdraw -->
             <div class="modal-overlay" id="withdrawModal">
                 <div class="modal-sheet">
-                    <h3>Withdraw via</h3>
-                    <div class="option-card" data-method="qris" data-label="QRIS" data-icon="📱" data-sub="Instan, bebas biaya" data-action="withdraw"><div class="option-left"><div class="option-icon">📱</div><div class="option-text">QRIS<small>Instan, bebas biaya</small></div></div><span>›</span></div>
-                    <div class="option-card" data-method="xrocket" data-label="xRocket" data-icon="🚀" data-sub="Crypto, USDT" data-action="withdraw"><div class="option-left"><div class="option-icon">🚀</div><div class="option-text">xRocket<small>Crypto, USDT</small></div></div><span>›</span></div>
+                    <h3>💸 Withdraw via</h3>
+                    <div class="option-card" data-action="withdraw" data-method="qris">
+                        <div class="option-left"><div class="option-icon">📱</div><div class="option-text">QRIS / Nomor Rekening<small>Transfer ke rekening bank kamu</small></div></div><span>›</span>
+                    </div>
+                    <div class="option-card" data-action="withdraw" data-method="xrocket">
+                        <div class="option-left"><div class="option-icon">🚀</div><div class="option-text">xRocket (USDT)<small>Kirim ke wallet TON kamu</small></div></div><span>›</span>
+                    </div>
                     <button class="cancel-btn" onclick="document.getElementById('withdrawModal').classList.remove('active')">Batal</button>
                 </div>
             </div>
-            
+
+            <!-- Modal Deposit/Withdraw Form -->
             <div class="modal-overlay" id="payInstructionModal">
                 <div class="modal-sheet">
-                    <div class="pay-back-row">
-                        <button class="pay-back-btn" onclick="document.getElementById('payInstructionModal').classList.remove('active')">←</button>
-                        <h3 id="payInstructionTitle">Deposit</h3>
+                    <div class="pay-back-row" style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+                        <button class="pay-back-btn" onclick="document.getElementById('payInstructionModal').classList.remove('active')" style="background:var(--bg);border:1px solid var(--divider);border-radius:var(--radius-md);padding:8px 12px;cursor:pointer;">←</button>
+                        <h3 id="payInstructionTitle" style="margin:0;">Deposit</h3>
                     </div>
+
+                    <!-- Field tujuan withdraw (hanya muncul saat withdraw) -->
+                    <div class="field-group" id="withdrawDestGroup" style="display:none;">
+                        <label class="field-label" for="withdrawDestInput">Nomor Rekening / Wallet Tujuan</label>
+                        <input type="text" class="textarea-input" id="withdrawDestInput" style="min-height:44px;" placeholder="Nomor rekening, QRIS, atau alamat wallet TON">
+                        <div style="font-size:11px;color:var(--text-secondary);margin-top:4px;">Pastikan nomor tujuan sudah benar. Salah transfer tidak bisa direfund.</div>
+                    </div>
+
                     <div class="field-group">
-                        <label class="field-label" for="payAmountInput">Nominal (min Rp10.000)</label>
+                        <label class="field-label" for="payAmountInput">Nominal</label>
                         <div class="amount-input-wrap"><span>Rp</span><input type="text" inputmode="numeric" id="payAmountInput" placeholder="0"></div>
-                        <div class="field-error" id="payAmountError">Masukkan nominal minimal Rp 10.000</div>
+                        <div class="field-error" id="payAmountError">Minimal Rp10.000</div>
                     </div>
-                    <!-- Area QRIS / xRocket — muncul setelah generate -->
-                    <div id="payResultArea" style="display:none; text-align:center; padding: 8px 0 12px;">
+
+                    <!-- Card VIP deposit > 500rb -->
+                    <div id="vipDepositCard" style="display:none;background:linear-gradient(135deg,#f59e0b,#d97706);border-radius:var(--radius-lg);padding:16px;margin-bottom:16px;color:white;">
+                        <div style="font-size:16px;font-weight:700;margin-bottom:6px;">💎 Deposit VIP</div>
+                        <div style="font-size:13px;opacity:0.9;margin-bottom:12px;">Untuk deposit di atas Rp500.000, Tim Haraheta siap bantu proses langsung biar lebih aman & terpercaya.</div>
+                        <button onclick="openVIPChat()" style="background:white;color:#d97706;border:none;border-radius:var(--radius-md);padding:10px 16px;font-weight:700;font-size:14px;cursor:pointer;width:100%;">💬 Hubungi Tim Haraheta</button>
+                    </div>
+
+                    <!-- Area QRIS / xRocket hasil generate -->
+                    <div id="payResultArea" style="display:none;text-align:center;padding:8px 0 12px;">
                         <div id="payQrisBox" style="display:none;">
-                            <p style="font-size:13px; color:var(--text-secondary); margin-bottom:10px;">Scan QRIS ini di aplikasi bank kamu</p>
-                            <img id="payQrisImage" src="" alt="QRIS" style="width:200px; height:200px; border-radius:var(--radius-md); border:1px solid var(--divider);">
-                            <p style="font-size:12px; color:var(--danger); margin-top:8px;">⏳ Berlaku 10 menit</p>
+                            <p style="font-size:13px;color:var(--text-secondary);margin-bottom:10px;">Scan QRIS ini di aplikasi bank kamu</p>
+                            <img id="payQrisImage" src="" alt="QRIS" style="width:200px;height:200px;border-radius:var(--radius-md);border:1px solid var(--divider);">
+                            <p style="font-size:12px;color:var(--danger);margin-top:8px;">⏳ Berlaku 10 menit</p>
                         </div>
                         <div id="payXrocketBox" style="display:none;">
-                            <p style="font-size:13px; color:var(--text-secondary); margin-bottom:10px;">Bayar lewat xRocket</p>
-                            <p id="payXrocketAmount" style="font-size:18px; font-weight:700; color:var(--accent);"></p>
-                            <a id="payXrocketLink" href="#" target="_blank" class="confirm-btn" style="display:block; margin-top:12px; text-decoration:none;">🚀 Buka xRocket</a>
+                            <p style="font-size:13px;color:var(--text-secondary);margin-bottom:10px;">Bayar lewat xRocket</p>
+                            <p id="payXrocketAmount" style="font-size:18px;font-weight:700;color:var(--accent);"></p>
+                            <button onclick="openXrocketLink()" class="confirm-btn" style="margin-top:12px;">🚀 Buka xRocket</button>
                         </div>
-                        <p style="font-size:12px; color:var(--text-secondary); margin-top:12px;">Saldo otomatis bertambah setelah pembayaran berhasil.</p>
+                        <p style="font-size:12px;color:var(--text-secondary);margin-top:12px;">Saldo otomatis bertambah setelah pembayaran berhasil.</p>
                     </div>
+
                     <button class="confirm-btn" id="payConfirmBtn" disabled>Generate Pembayaran</button>
-                    <div id="payLoadingText" style="display:none; text-align:center; font-size:13px; color:var(--text-secondary); margin-top:10px;">⏳ Sedang generate pembayaran...</div>
+                    <div id="payLoadingText" style="display:none;text-align:center;font-size:13px;color:var(--text-secondary);margin-top:10px;">⏳ Sedang memproses...</div>
+                </div>
+            </div>
+
+            <!-- Modal Withdraw Form xRocket -->
+            <div class="modal-overlay" id="withdrawXrocketModal">
+                <div class="modal-sheet">
+                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+                        <button onclick="document.getElementById('withdrawXrocketModal').classList.remove('active')" style="background:var(--bg);border:1px solid var(--divider);border-radius:var(--radius-md);padding:8px 12px;cursor:pointer;">←</button>
+                        <h3 style="margin:0;">🚀 Withdraw xRocket</h3>
+                    </div>
+                    <div class="field-group">
+                        <label class="field-label">Alamat Wallet TON Tujuan</label>
+                        <input type="text" class="textarea-input" id="xrocketWalletInput" style="min-height:44px;" placeholder="UQ... atau EQ...">
+                    </div>
+                    <div class="field-group">
+                        <label class="field-label">Nominal Withdraw (Rp)</label>
+                        <div class="amount-input-wrap"><span>Rp</span><input type="text" inputmode="numeric" id="xrocketWithdrawAmount" placeholder="Min Rp50.000"></div>
+                        <div id="xrocketWithdrawEstimate" style="font-size:12px;color:var(--text-secondary);margin-top:6px;">≈ 0 USDT</div>
+                    </div>
+                    <div class="escrow-note">
+                        <span>⚠️</span>
+                        <span>Pastikan alamat wallet TON benar. Transfer yang salah tidak bisa dikembalikan.</span>
+                    </div>
+                    <button class="confirm-btn" id="xrocketWithdrawBtn" disabled>Kirim via xRocket</button>
+                    <div id="xrocketWithdrawLoading" style="display:none;text-align:center;font-size:13px;color:var(--text-secondary);margin-top:10px;">⏳ Memproses withdraw...</div>
                 </div>
             </div>
         </div>
@@ -1150,27 +1196,42 @@
         <!-- 5. PROFILE PAGE -->
         <div class="page" id="page-profile">
             <div class="profile-header">
-                <div class="avatar-large">D</div>
-                <div class="profile-name">Dika Kurniawan</div>
-                <div class="profile-username">@dikakurniawan</div>
-                <div class="profile-id"><span>🆔</span> ID: 1234567890</div>
+                <div class="avatar-large" id="profileAvatar">?</div>
+                <div class="profile-name" id="profileName">Memuat...</div>
+                <div class="profile-username" id="profileUsername"></div>
+                <div class="profile-id" id="profileId"><span>🆔</span> ID: -</div>
                 <div class="badge-row"><span class="badge">⚒️ Worker</span><span class="badge">📋 Client</span></div>
             </div>
             <div class="stat-grid">
-                <div class="stat-card"><div class="stat-value">12</div><div class="stat-label">✅ Task Selesai</div></div>
-                <div class="stat-card"><div class="stat-value">4.8</div><div class="stat-label">⭐ Rating</div></div>
+                <div class="stat-card"><div class="stat-value" id="profileTasksDone">0</div><div class="stat-label">✅ Task Selesai</div></div>
+                <div class="stat-card"><div class="stat-value" id="profileRating">5.0</div><div class="stat-label">⭐ Rating</div></div>
+                <div class="stat-card"><div class="stat-value" id="profileTotalRef">0</div><div class="stat-label">🔗 Referral</div></div>
+                <div class="stat-card"><div class="stat-value" id="profileTotalJobs">0</div><div class="stat-label">📋 Job Diposting</div></div>
             </div>
             <div class="referral-menu" id="openReferralModal">
-                <div style="display: flex; align-items: center; gap: 12px;"><span style="font-size: 24px;">🔗</span><div><div style="font-weight: 600; color: var(--text-primary);">Undang Teman</div><div style="font-size: 12px; color: var(--text-secondary);">Dapatkan bonus referral</div></div></div>
-                <span style="color: var(--accent); font-weight: 600;">Lihat ›</span>
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <span style="font-size:24px;">🔗</span>
+                    <div><div style="font-weight:600;color:var(--text-primary);">Undang Teman</div>
+                    <div style="font-size:12px;color:var(--text-secondary);">Dapatkan bonus referral</div></div>
+                </div>
+                <span style="color:var(--accent);font-weight:600;">Lihat ›</span>
             </div>
-            
-            <!-- Modal Referral -->
+
+            <!-- Modal Referral — link dinamis dari CURRENT_USER.telegram_id -->
             <div class="modal-overlay" id="referralModal">
                 <div class="modal-sheet">
                     <h3>🔗 Referral Kamu</h3>
-                    <div class="referral-link-box" style="background:var(--bg); border:1px solid var(--divider); border-radius:var(--radius-md); padding:12px; margin:16px 0;">
-                        <span style="font-size:14px; word-break:break-all;">https://t.me/HarahetaFreelanceBot?start=ref12345</span>
+                    <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px;">Ajak teman pakai link di bawah. Kamu dapat bonus setiap teman yang join & aktif.</p>
+                    <div class="referral-link-box" style="background:var(--bg);border:1px solid var(--accent);border-radius:var(--radius-md);padding:12px;margin-bottom:12px;">
+                        <span id="referralLinkText" style="font-size:13px;word-break:break-all;color:var(--text-primary);">Memuat link...</span>
+                    </div>
+                    <div style="display:flex;gap:8px;margin-bottom:12px;">
+                        <button class="btn-ambil" style="flex:1;" onclick="copyReferralLink()">📋 Copy Link</button>
+                        <button class="btn-ambil" style="flex:1;background:linear-gradient(135deg,#25d366,#128c7e);" onclick="shareReferralLink()">📤 Share</button>
+                    </div>
+                    <div class="member-estimate-box">
+                        <div class="estimate-row"><span>Total teman diundang</span><span id="refModalTotalRef">0 orang</span></div>
+                        <div class="estimate-row highlight"><span>Bonus terkumpul</span><span id="refModalBonus">Rp 0</span></div>
                     </div>
                     <button class="cancel-btn" onclick="document.getElementById('referralModal').classList.remove('active')">Tutup</button>
                 </div>
@@ -1271,27 +1332,27 @@
         let CURRENT_USER = null;
 
         async function initUser() {
-            const tgUser = tg?.initDataUnsafe?.user;
-            if (!tgUser) {
-                // Mode testing di browser — pakai dummy
-                CURRENT_USER = { id: 'test-uuid', telegram_id: 999999, username: 'testuser', full_name: 'Test User', balance_idr: 10000000, anti_dup_active: false };
+            const initData = tg?.initData;
+            if (!initData) {
+                // Mode testing di browser (bukan Telegram) — pakai dummy
+                CURRENT_USER = {
+                    id: 'test-uuid', telegram_id: 999999, username: 'testuser',
+                    full_name: 'Test User', balance_idr: 10000000, anti_dup_active: false,
+                    total_jobs_done: 0, rating: 5.0, total_referrals: 0
+                };
                 renderProfileUI();
                 return;
             }
             try {
-                const existing = await db.get('users', `?telegram_id=eq.${tgUser.id}&limit=1`);
-                if (existing.length > 0) {
-                    CURRENT_USER = existing[0];
-                } else {
-                    const created = await db.post('users', {
-                        telegram_id: tgUser.id,
-                        username: tgUser.username || null,
-                        full_name: `${tgUser.first_name || ''} ${tgUser.last_name || ''}`.trim(),
-                        balance_idr: 0,
-                        anti_dup_active: false
-                    });
-                    CURRENT_USER = created[0];
-                }
+                // Verifikasi initData di server (aman, validasi HMAC Telegram)
+                const res = await fetch('/api/auth/verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ initData })
+                });
+                const data = await res.json();
+                if (!data.ok || !data.user) throw new Error(data.error || 'Auth gagal');
+                CURRENT_USER = data.user;
                 renderProfileUI();
                 if (CURRENT_USER.anti_dup_active) {
                     antiDupActivated = true;
@@ -1302,14 +1363,77 @@
             }
         }
 
+
+
         function renderProfileUI() {
             if (!CURRENT_USER) return;
-            const el = (s) => document.querySelector(s);
-            if (el('.profile-name')) el('.profile-name').textContent = CURRENT_USER.full_name || 'User';
-            if (el('.profile-username')) el('.profile-username').textContent = CURRENT_USER.username ? `@${CURRENT_USER.username}` : '';
-            if (el('.avatar-large')) el('.avatar-large').textContent = (CURRENT_USER.full_name || 'U')[0].toUpperCase();
-            if (el('.profile-id')) el('.profile-id').innerHTML = `<span>🆔</span> ID: ${CURRENT_USER.telegram_id}`;
-            if (el('.balance-amount')) el('.balance-amount').textContent = 'Rp ' + (CURRENT_USER.balance_idr || 0).toLocaleString('id-ID');
+
+            // Header
+            const name = CURRENT_USER.full_name || CURRENT_USER.username || 'User';
+            const pid  = (s) => document.getElementById(s);
+            const pqs  = (s) => document.querySelector(s);
+
+            if (pid('profileAvatar'))   pid('profileAvatar').textContent   = name[0].toUpperCase();
+            if (pid('profileName'))     pid('profileName').textContent     = name;
+            if (pid('profileUsername')) pid('profileUsername').textContent = CURRENT_USER.username ? `@${CURRENT_USER.username}` : '';
+            if (pid('profileId'))       pid('profileId').innerHTML         = `<span>🆔</span> ID: ${CURRENT_USER.telegram_id}`;
+
+            // Stats
+            if (pid('profileTasksDone')) pid('profileTasksDone').textContent = CURRENT_USER.total_jobs_done || 0;
+            if (pid('profileRating'))    pid('profileRating').textContent    = (CURRENT_USER.rating || 5.0).toFixed(1);
+            if (pid('profileTotalRef'))  pid('profileTotalRef').textContent  = CURRENT_USER.total_referrals || 0;
+            if (pid('profileTotalJobs')) pid('profileTotalJobs').textContent = JOBS_STATE.filter(j => j.clientId === CURRENT_USER.id).length;
+
+            // Badge dinamis
+            const badgeRow = pqs('.badge-row');
+            if (badgeRow) {
+                const hasDeployed = JOBS_STATE.some(j => j.clientId === CURRENT_USER.id);
+                const hasClaimed  = CLAIMS_STATE.length > 0;
+                badgeRow.innerHTML =
+                    (hasClaimed  ? '<span class="badge">⚒️ Worker</span>'  : '') +
+                    (hasDeployed ? '<span class="badge">📋 Client</span>' : '') ||
+                    '<span class="badge">🆕 New</span>';
+            }
+
+            // Saldo di wallet
+            const walBal  = pid('walletBalanceAmount');
+            const walUsdt = pid('walletBalanceUsdt');
+            if (walBal)  walBal.textContent  = 'Rp ' + (CURRENT_USER.balance_idr || 0).toLocaleString('id-ID');
+            if (walUsdt) walUsdt.textContent = '≈ ' + ((CURRENT_USER.balance_idr || 0) / 16300).toFixed(2) + ' USDT';
+
+            // Link referral
+            const refLink  = `https://t.me/harahetajobbot?start=ref${CURRENT_USER.telegram_id}`;
+            const refBonus = formatRupiahSafe((CURRENT_USER.total_referrals || 0) * 1000);
+            if (pid('referralLinkText')) pid('referralLinkText').textContent = refLink;
+            if (pid('refModalTotalRef')) pid('refModalTotalRef').textContent = `${CURRENT_USER.total_referrals || 0} orang`;
+            if (pid('refModalBonus'))    pid('refModalBonus').textContent    = refBonus;
+        }
+
+        function copyReferralLink() {
+            const link = `https://t.me/harahetajobbot?start=ref${CURRENT_USER?.telegram_id}`;
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(link).then(() => alert('✅ Link referral disalin!'));
+            } else {
+                const el = document.getElementById('referralLinkText');
+                const range = document.createRange();
+                range.selectNode(el);
+                window.getSelection().removeAllRanges();
+                window.getSelection().addRange(range);
+                document.execCommand('copy');
+                alert('✅ Link referral disalin!');
+            }
+        }
+
+        function shareReferralLink() {
+            const link = `https://t.me/harahetajobbot?start=ref${CURRENT_USER?.telegram_id}`;
+            const text = `Bergabung di Haraheta Freelance — platform micro-job Telegram! Cari cuan dari job sosmed, referral, dan lainnya 💰
+
+${link}`;
+            if (tg) {
+                tg.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`);
+            } else {
+                window.open(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`, '_blank');
+            }
         }
 
         // ============================================================
@@ -2554,110 +2678,220 @@
         document.getElementById('withdrawBtn').addEventListener('click', () => document.getElementById('withdrawModal').classList.add('active'));
         document.getElementById('openReferralModal').addEventListener('click', () => document.getElementById('referralModal').classList.add('active'));
 
-        // ===== PAYMENT — Deposit via QRIS (bayar.gg) / xRocket =====
-        let currentPayMethod = null;
+        // ===== WALLET: LOAD TX HISTORY DARI SUPABASE =====
+        async function loadTransactions() {
+            if (!CURRENT_USER?.id) return;
+            try {
+                const txs = await db.get('transactions', `?user_id=eq.${CURRENT_USER.id}&order=created_at.desc&limit=20`);
+                const list = document.getElementById('txList');
+                if (!txs.length) {
+                    list.innerHTML = '<div class="empty-state" style="padding:20px;">Belum ada transaksi.</div>';
+                    return;
+                }
+                list.innerHTML = txs.map(tx => {
+                    const isPlus = tx.amount > 0;
+                    const date = new Date(tx.created_at).toLocaleString('id-ID', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
+                    return `<div class="tx-item">
+                        <div class="tx-info">
+                            <span class="tx-title">${tx.note || tx.type}</span>
+                            <span class="tx-date">${date}</span>
+                        </div>
+                        <span class="tx-amount ${isPlus ? 'plus' : 'minus'}">${isPlus ? '+' : ''}Rp ${Math.abs(tx.amount).toLocaleString('id-ID')}</span>
+                    </div>`;
+                }).join('');
 
-        // Input nominal
+                // Update saldo di wallet page juga
+                const balEl = document.getElementById('walletBalanceAmount');
+                const usdtEl = document.getElementById('walletBalanceUsdt');
+                if (balEl && CURRENT_USER) {
+                    balEl.textContent = 'Rp ' + (CURRENT_USER.balance_idr || 0).toLocaleString('id-ID');
+                    usdtEl.textContent = '≈ ' + ((CURRENT_USER.balance_idr || 0) / 16300).toFixed(2) + ' USDT';
+                }
+            } catch (err) { console.error('loadTransactions error:', err); }
+        }
+
+        // Load tx saat buka halaman dompet
+        document.querySelector('.nav-item[data-page="page-wallet"]').addEventListener('click', loadTransactions);
+
+        // ===== PAYMENT =====
+        const QRIS_LIMIT = 500000;
+        let currentPayMethod = null;
+        let currentXrocketInvoiceUrl = null;
+
+        function openVIPChat() {
+            const msg = encodeURIComponent('Halo, saya ingin deposit lebih dari Rp500.000 di Haraheta Freelance.');
+            const url = `https://t.me/harahetaowner?text=${msg}`;
+            if (tg) tg.openLink(url); else window.open(url, '_blank');
+        }
+
+        function openXrocketLink() {
+            if (!currentXrocketInvoiceUrl) return;
+            if (tg) tg.openLink(currentXrocketInvoiceUrl);
+            else window.open(currentXrocketInvoiceUrl, '_blank');
+        }
+
+        function resetPayModal() {
+            document.getElementById('payResultArea').style.display = 'none';
+            document.getElementById('payQrisBox').style.display = 'none';
+            document.getElementById('payXrocketBox').style.display = 'none';
+            document.getElementById('vipDepositCard').style.display = 'none';
+            document.getElementById('payAmountInput').value = '';
+            document.getElementById('payAmountError').classList.remove('show');
+            document.getElementById('payConfirmBtn').disabled = true;
+            document.getElementById('payConfirmBtn').style.display = 'block';
+            document.getElementById('payConfirmBtn').textContent = 'Generate Pembayaran';
+            document.getElementById('payLoadingText').style.display = 'none';
+            document.getElementById('withdrawDestGroup').style.display = 'none';
+        }
+
+        // Input nominal deposit — cek limit Rp500rb
         document.getElementById('payAmountInput').addEventListener('input', (e) => {
             const digits = e.target.value.replace(/\D/g, '');
             e.target.value = digits ? Number(digits).toLocaleString('id-ID') : '';
             const amount = digits ? parseInt(digits) : 0;
             const errEl = document.getElementById('payAmountError');
             const btnEl = document.getElementById('payConfirmBtn');
-            errEl.classList.toggle('show', digits.length > 0 && amount < 10000);
-            btnEl.disabled = amount < 10000;
+            const vipEl = document.getElementById('vipDepositCard');
+            const isDeposit = !document.getElementById('withdrawDestGroup').style.display || document.getElementById('withdrawDestGroup').style.display === 'none';
+
+            if (isDeposit && currentPayMethod === 'qris' && amount > QRIS_LIMIT) {
+                vipEl.style.display = 'block';
+                btnEl.style.display = 'none';
+                errEl.classList.remove('show');
+            } else {
+                vipEl.style.display = 'none';
+                btnEl.style.display = 'block';
+                errEl.classList.toggle('show', digits.length > 0 && amount < 10000);
+                btnEl.disabled = amount < 10000;
+            }
         });
 
-        // Pilih metode deposit → simpan method, buka modal nominal
+        // Pilih metode DEPOSIT
         document.querySelectorAll('.option-card[data-action="deposit"]').forEach(card => {
             card.addEventListener('click', () => {
-                currentPayMethod = card.dataset.method === 'qris_seabank' ? 'qris' : 'xrocket';
+                currentPayMethod = card.dataset.method;
                 document.getElementById('depositModal').classList.remove('active');
                 document.getElementById('payInstructionTitle').textContent =
-                    currentPayMethod === 'qris' ? 'Deposit via QRIS' : 'Deposit via xRocket';
-                // Reset area hasil sebelumnya
-                document.getElementById('payResultArea').style.display = 'none';
-                document.getElementById('payQrisBox').style.display = 'none';
-                document.getElementById('payXrocketBox').style.display = 'none';
-                document.getElementById('payAmountInput').value = '';
-                document.getElementById('payConfirmBtn').disabled = true;
-                document.getElementById('payConfirmBtn').textContent = 'Generate Pembayaran';
+                    currentPayMethod === 'qris' ? '➕ Deposit via QRIS' : '➕ Deposit via xRocket';
+                document.getElementById('withdrawDestGroup').style.display = 'none';
+                resetPayModal();
                 document.getElementById('payInstructionModal').classList.add('active');
             });
         });
 
-        // Withdraw — masih simulasi, belum ada disbursement API
+        // Pilih metode WITHDRAW
         document.querySelectorAll('.option-card[data-action="withdraw"]').forEach(card => {
             card.addEventListener('click', () => {
+                const method = card.dataset.method;
                 document.getElementById('withdrawModal').classList.remove('active');
-                alert('Fitur withdraw segera hadir! Hubungi @satpamharaheta untuk withdraw manual sementara ini.');
+                if (method === 'xrocket') {
+                    document.getElementById('withdrawXrocketModal').classList.add('active');
+                } else {
+                    currentPayMethod = 'withdraw_qris';
+                    document.getElementById('payInstructionTitle').textContent = '💸 Withdraw via QRIS';
+                    document.getElementById('withdrawDestGroup').style.display = 'block';
+                    resetPayModal();
+                    document.getElementById('payConfirmBtn').textContent = 'Kirim Request Withdraw';
+                    document.getElementById('payInstructionModal').classList.add('active');
+                }
             });
         });
 
-        // Klik "Generate Pembayaran"
+        // Klik "Generate / Kirim"
         document.getElementById('payConfirmBtn').addEventListener('click', async () => {
             const digits = document.getElementById('payAmountInput').value.replace(/\D/g, '');
             const amount = parseInt(digits);
             if (!amount || amount < 10000) return;
-            if (!CURRENT_USER?.telegram_id) {
-                alert('Gagal: data user tidak ditemukan. Buka mini app dari Telegram ya.');
-                return;
-            }
+            if (!CURRENT_USER?.telegram_id) { alert('Buka mini app dari Telegram ya.'); return; }
 
             const btn = document.getElementById('payConfirmBtn');
             const loading = document.getElementById('payLoadingText');
-            btn.disabled = true;
-            btn.style.display = 'none';
-            loading.style.display = 'block';
+            btn.disabled = true; btn.style.display = 'none'; loading.style.display = 'block';
 
             try {
-                const res = await fetch('/api/payment/create', {
+                if (currentPayMethod === 'withdraw_qris') {
+                    const dest = document.getElementById('withdrawDestInput').value.trim();
+                    if (!dest) { alert('Masukkan nomor rekening / QRIS tujuan dulu.'); btn.style.display='block'; btn.disabled=false; loading.style.display='none'; return; }
+                    const res = await fetch('/api/payment/withdraw', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'x-internal-key': INTERNAL_KEY },
+                        body: JSON.stringify({ method: 'qris', amount, telegram_id: CURRENT_USER.telegram_id, destination: dest })
+                    });
+                    const data = await res.json();
+                    loading.style.display = 'none';
+                    if (data.ok) {
+                        CURRENT_USER.balance_idr -= amount;
+                        renderProfileUI(); loadTransactions();
+                        document.getElementById('payInstructionModal').classList.remove('active');
+                        alert('✅ Request withdraw diterima! Tim Haraheta akan transfer dalam 1x24 jam.');
+                    } else { btn.style.display='block'; btn.disabled=false; alert(data.error || 'Gagal withdraw.'); }
+                } else {
+                    const res = await fetch('/api/payment/create', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'x-internal-key': INTERNAL_KEY },
+                        body: JSON.stringify({ method: currentPayMethod, amount, telegram_id: CURRENT_USER.telegram_id })
+                    });
+                    const data = await res.json();
+                    loading.style.display = 'none';
+                    document.getElementById('payResultArea').style.display = 'block';
+                    if (currentPayMethod === 'qris') {
+                        document.getElementById('payQrisBox').style.display = 'block';
+                        const img = document.getElementById('payQrisImage');
+                        img.src = data.qr_url || (data.qr_string ? `https://chart.googleapis.com/chart?cht=qr&chs=300x300&chl=${encodeURIComponent(data.qr_string)}` : '');
+                    } else {
+                        document.getElementById('payXrocketBox').style.display = 'block';
+                        document.getElementById('payXrocketAmount').textContent = `${data.usdt_amount} USDT`;
+                        currentXrocketInvoiceUrl = data.invoice_url;
+                    }
+                }
+            } catch (err) {
+                loading.style.display = 'none'; btn.style.display = 'block'; btn.disabled = false;
+                alert(`Gagal: ${err.message}`); console.error(err);
+            }
+        });
+
+        // Withdraw xRocket — modal terpisah
+        document.getElementById('xrocketWithdrawAmount').addEventListener('input', (e) => {
+            const digits = e.target.value.replace(/\D/g, '');
+            e.target.value = digits ? Number(digits).toLocaleString('id-ID') : '';
+            const amount = digits ? parseInt(digits) : 0;
+            document.getElementById('xrocketWithdrawEstimate').textContent = amount > 0 ? `≈ ${(amount/16300).toFixed(2)} USDT` : '≈ 0 USDT';
+            document.getElementById('xrocketWithdrawBtn').disabled = amount < 50000 || !document.getElementById('xrocketWalletInput').value.trim();
+        });
+        document.getElementById('xrocketWalletInput').addEventListener('input', () => {
+            const digits = document.getElementById('xrocketWithdrawAmount').value.replace(/\D/g, '');
+            const amount = digits ? parseInt(digits) : 0;
+            document.getElementById('xrocketWithdrawBtn').disabled = amount < 50000 || !document.getElementById('xrocketWalletInput').value.trim();
+        });
+
+        document.getElementById('xrocketWithdrawBtn').addEventListener('click', async () => {
+            const digits = document.getElementById('xrocketWithdrawAmount').value.replace(/\D/g, '');
+            const amount = parseInt(digits);
+            const wallet = document.getElementById('xrocketWalletInput').value.trim();
+            if (!amount || amount < 50000 || !wallet) return;
+            if (!CURRENT_USER?.telegram_id) { alert('Buka mini app dari Telegram ya.'); return; }
+
+            const btn = document.getElementById('xrocketWithdrawBtn');
+            const loading = document.getElementById('xrocketWithdrawLoading');
+            btn.disabled = true; loading.style.display = 'block';
+
+            try {
+                const res = await fetch('/api/payment/withdraw', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'x-internal-key': INTERNAL_KEY
-                    },
-                    body: JSON.stringify({
-                        method: currentPayMethod,
-                        amount,
-                        telegram_id: CURRENT_USER.telegram_id
-                    })
+                    headers: { 'Content-Type': 'application/json', 'x-internal-key': INTERNAL_KEY },
+                    body: JSON.stringify({ method: 'xrocket', amount, telegram_id: CURRENT_USER.telegram_id, destination: wallet })
                 });
                 const data = await res.json();
-
                 loading.style.display = 'none';
-                document.getElementById('payResultArea').style.display = 'block';
-
-                if (currentPayMethod === 'qris') {
-                    document.getElementById('payQrisBox').style.display = 'block';
-                    // Duitku bisa return qr_string (raw) atau qr_url (gambar langsung)
-                    const img = document.getElementById('payQrisImage');
-                    if (data.qr_url) {
-                        img.src = data.qr_url;
-                    } else if (data.qr_string) {
-                        // Generate QR dari string menggunakan Google Chart API
-                        img.src = `https://chart.googleapis.com/chart?cht=qr&chs=300x300&chl=${encodeURIComponent(data.qr_string)}`;
-                    }
-                } else {
-                    document.getElementById('payXrocketBox').style.display = 'block';
-                    document.getElementById('payXrocketAmount').textContent = `${data.usdt_amount} USDT`;
-                    const link = document.getElementById('payXrocketLink');
-                    link.href = data.invoice_url;
-                    // Di dalam Telegram WebApp, buka link lewat tg.openLink
-                    link.addEventListener('click', (e) => {
-                        if (tg) {
-                            e.preventDefault();
-                            tg.openLink(data.invoice_url);
-                        }
-                    }, { once: true });
-                }
-
+                if (data.ok) {
+                    CURRENT_USER.balance_idr -= amount;
+                    renderProfileUI(); loadTransactions();
+                    document.getElementById('withdrawXrocketModal').classList.remove('active');
+                    alert(`✅ ${data.usdt_amount} USDT berhasil dikirim ke wallet kamu!`);
+                } else { btn.disabled = false; alert(data.error || 'Gagal withdraw xRocket.'); }
             } catch (err) {
-                loading.style.display = 'none';
-                btn.style.display = 'block';
-                btn.disabled = false;
-                alert(`Gagal generate pembayaran: ${err.message}`);
-                console.error('payment create error:', err);
+                loading.style.display = 'none'; btn.disabled = false;
+                alert(`Gagal: ${err.message}`);
             }
         });
     </script>
