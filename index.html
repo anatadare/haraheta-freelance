@@ -1333,16 +1333,36 @@
 
         async function initUser() {
             const initData = tg?.initData;
-            if (!initData) {
-                // Mode testing di browser (bukan Telegram) — pakai dummy
+            const tgUser   = tg?.initDataUnsafe?.user;
+
+            if (!initData && !tgUser) {
+                // Browser biasa — pakai dummy
                 CURRENT_USER = {
                     id: 'test-uuid', telegram_id: 999999, username: 'testuser',
-                    full_name: 'Test User', balance_idr: 10000000, anti_dup_active: false,
-                    total_jobs_done: 0, rating: 5.0, total_referrals: 0
+                    full_name: 'Test User', balance_idr: 0,
+                    anti_dup_active: false, total_jobs_done: 0,
+                    rating: 5.0, total_referrals: 0
                 };
                 renderProfileUI();
                 return;
             }
+
+            // Helper: isi CURRENT_USER dari tgUser langsung (fallback)
+            function setUserFromTg(tgU) {
+                CURRENT_USER = {
+                    id: null,
+                    telegram_id: tgU.id,
+                    username:    tgU.username || null,
+                    full_name:   `${tgU.first_name || ''} ${tgU.last_name || ''}`.trim(),
+                    balance_idr: 0, anti_dup_active: false,
+                    total_jobs_done: 0, rating: 5.0, total_referrals: 0
+                };
+                renderProfileUI();
+            }
+
+            // Kalau tidak ada initData tapi ada tgUser (edge case beberapa Telegram client)
+            if (!initData && tgUser) { setUserFromTg(tgUser); return; }
+
             try {
                 // Verifikasi initData di server (aman, validasi HMAC Telegram)
                 const res = await fetch('/api/auth/verify', {
@@ -1351,7 +1371,12 @@
                     body: JSON.stringify({ initData })
                 });
                 const data = await res.json();
-                if (!data.ok || !data.user) throw new Error(data.error || 'Auth gagal');
+                if (!data.ok || !data.user) {
+                    console.error('Auth verify failed:', data.error);
+                    // Fallback ke initDataUnsafe
+                    if (tgUser) setUserFromTg(tgUser);
+                    return;
+                }
                 CURRENT_USER = data.user;
                 renderProfileUI();
                 if (CURRENT_USER.anti_dup_active) {
@@ -1360,6 +1385,8 @@
                 }
             } catch (err) {
                 console.error('initUser error:', err);
+                // Network error — fallback ke initDataUnsafe
+                if (tgUser) setUserFromTg(tgUser);
             }
         }
 
@@ -2837,7 +2864,17 @@ ${link}`;
                     if (currentPayMethod === 'qris') {
                         document.getElementById('payQrisBox').style.display = 'block';
                         const img = document.getElementById('payQrisImage');
-                        img.src = data.qr_url || (data.qr_string ? `https://chart.googleapis.com/chart?cht=qr&chs=300x300&chl=${encodeURIComponent(data.qr_string)}` : '');
+                        // Prioritas: qr_image_url dari bayar.gg → generate dari qr_string → fallback link
+                        if (data.qr_image_url) {
+                            img.src = data.qr_image_url;
+                        } else if (data.qr_string) {
+                            img.src = `https://chart.googleapis.com/chart?cht=qr&chs=300x300&chl=${encodeURIComponent(data.qr_string)}`;
+                        } else if (data.payment_url) {
+                            // Fallback: tampilkan link bayar.gg jika QR tidak tersedia
+                            document.getElementById('payQrisBox').innerHTML =
+                                `<p style="font-size:13px;color:var(--text-secondary);margin-bottom:10px;">Klik link di bawah untuk membuka halaman pembayaran</p>
+                                <button onclick="if(tg)tg.openLink('${data.payment_url}');else window.open('${data.payment_url}','_blank')" class="confirm-btn">🏦 Buka Halaman Bayar</button>`;
+                        }
                     } else {
                         document.getElementById('payXrocketBox').style.display = 'block';
                         document.getElementById('payXrocketAmount').textContent = `${data.usdt_amount} USDT`;
