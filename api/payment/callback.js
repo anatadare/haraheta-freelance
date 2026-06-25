@@ -1,10 +1,9 @@
 // ============================================================
 // POST /api/payment/callback
 // Terima notifikasi dari bayar.gg & xRocket
-// Verifikasi signature → update saldo Supabase → notif Telegram
 // ============================================================
 
-const BAYARGG_WEBHOOK_SECRET = process.env.BAYARGG_WEBHOOK_SECRET; // dari bayar.gg → Developer → Webhook & Callback
+const BAYARGG_WEBHOOK_SECRET = process.env.BAYARGG_WEBHOOK_SECRET;
 const XROCKET_TOKEN          = process.env.XROCKET_TOKEN;
 const SUPABASE_URL           = 'https://uhsotknuawggqbykbxug.supabase.co';
 const SUPABASE_SERVICE_KEY   = process.env.SUPABASE_SERVICE_KEY;
@@ -14,13 +13,9 @@ import crypto from 'crypto';
 
 const TELEGRAM_API = `https://api.telegram.org/bot${BOT_TOKEN}`;
 
-// ── Supabase helpers ─────────────────────────────────────────
 async function dbGet(table, query = '') {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}${query}`, {
-        headers: {
-            'apikey': SUPABASE_SERVICE_KEY,
-            'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`
-        }
+        headers: { 'apikey': SUPABASE_SERVICE_KEY, 'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}` }
     });
     return res.json();
 }
@@ -28,11 +23,7 @@ async function dbGet(table, query = '') {
 async function dbPatch(table, query, data) {
     await fetch(`${SUPABASE_URL}/rest/v1/${table}${query}`, {
         method: 'PATCH',
-        headers: {
-            'apikey': SUPABASE_SERVICE_KEY,
-            'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
-            'Content-Type': 'application/json'
-        },
+        headers: { 'apikey': SUPABASE_SERVICE_KEY, 'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
     });
 }
@@ -40,17 +31,11 @@ async function dbPatch(table, query, data) {
 async function dbPost(table, data) {
     await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
         method: 'POST',
-        headers: {
-            'apikey': SUPABASE_SERVICE_KEY,
-            'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
-            'Content-Type': 'application/json',
-            'Prefer': 'return=minimal'
-        },
+        headers: { 'apikey': SUPABASE_SERVICE_KEY, 'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
         body: JSON.stringify(data)
     });
 }
 
-// ── Tambah saldo user & catat transaksi ──────────────────────
 async function addBalance(telegramId, amount, method, note) {
     const users = await dbGet('users', `?telegram_id=eq.${telegramId}&limit=1`);
     const user = users[0];
@@ -59,20 +44,13 @@ async function addBalance(telegramId, amount, method, note) {
     await dbPatch('users', `?telegram_id=eq.${telegramId}`, {
         balance_idr: user.balance_idr + amount
     });
-
     await dbPost('transactions', {
-        user_id: user.id,
-        type:    'deposit',
-        amount,
-        method,
-        note
+        user_id: user.id, type: 'deposit', amount, method, note
     });
-
     return user;
 }
 
-// ── Notif Telegram ───────────────────────────────────────────
-async function sendTelegramMessage(chatId, text) {
+async function sendTelegram(chatId, text) {
     await fetch(`${TELEGRAM_API}/sendMessage`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -80,7 +58,6 @@ async function sendTelegramMessage(chatId, text) {
     });
 }
 
-// ── Main handler ─────────────────────────────────────────────
 export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(200).send('OK');
 
@@ -88,40 +65,38 @@ export default async function handler(req, res) {
     const timestamp = req.headers['x-webhook-timestamp'] || '';
     const signature = req.headers['x-webhook-signature'] || '';
 
+    console.log('callback received:', JSON.stringify(body).slice(0, 200));
+
     try {
         // ── Callback dari bayar.gg ───────────────────────────────
-        // Payload: { event, invoice_id, status, final_amount, description, ... }
+        // Docs: event = "payment.paid", header X-Webhook-Signature
+        // Signature: HMAC SHA256 dari "{invoice_id}|{status}|{final_amount}|{timestamp}"
         if (body.event === 'payment.paid') {
-
-            // Verifikasi signature bayar.gg
-            // Format: HMAC SHA256 dari "{invoice_id}|{status}|{final_amount}|{timestamp}"
-            const sigData      = `${body.invoice_id}|${body.status}|${body.final_amount}|${timestamp}`;
-            const expectedSig  = crypto.createHmac('sha256', BAYARGG_WEBHOOK_SECRET)
-                .update(sigData)
-                .digest('hex');
+            // Verifikasi signature
+            const sigData     = `${body.invoice_id}|${body.status}|${body.final_amount}|${timestamp}`;
+            const expectedSig = crypto.createHmac('sha256', BAYARGG_WEBHOOK_SECRET)
+                .update(sigData).digest('hex');
 
             if (expectedSig !== signature) {
-                console.error('bayar.gg webhook signature mismatch');
+                console.error('bayar.gg signature mismatch. Expected:', expectedSig, 'Got:', signature);
                 return res.status(200).send('INVALID SIGNATURE');
             }
 
-            if (body.status !== 'paid') {
+            if (body.status !== 'paid') return res.status(200).send('OK');
+
+            // Extract telegram_id dari customer_name: "User {telegram_id}"
+            const match = (body.customer_name || '').match(/User (\d+)/);
+            if (!match) {
+                console.error('Tidak bisa parse telegram_id dari customer_name:', body.customer_name);
                 return res.status(200).send('OK');
             }
 
-            // Ambil telegram_id dari description / customer_name
-            // Format customer_name saat create: "User {telegram_id}"
-            const telegramIdMatch = (body.customer_name || '').match(/User (\d+)/);
-            if (!telegramIdMatch) {
-                console.error('Tidak bisa parse telegram_id dari:', body.customer_name);
-                return res.status(200).send('OK');
-            }
-            const telegramId = parseInt(telegramIdMatch[1]);
+            const telegramId = parseInt(match[1]);
             const amount     = parseInt(body.final_amount);
 
-            const user = await addBalance(telegramId, amount, 'qris', body.invoice_id);
+            await addBalance(telegramId, amount, 'qris', body.invoice_id);
 
-            await sendTelegramMessage(telegramId,
+            await sendTelegram(telegramId,
                 `✅ <b>Deposit Berhasil!</b>\n\n` +
                 `💰 <b>+Rp ${amount.toLocaleString('id-ID')}</b> masuk ke saldo kamu\n` +
                 `📋 Via: QRIS (bayar.gg)\n` +
@@ -137,35 +112,29 @@ export default async function handler(req, res) {
             const xrocketSig = req.headers['rocket-pay-signature'];
             if (!xrocketSig) return res.status(200).send('OK');
 
-            // Verifikasi HMAC SHA256 dari payload JSON
-            const bodyStr    = JSON.stringify(body);
-            const sigCheck   = crypto.createHmac('sha256', XROCKET_TOKEN)
-                .update(bodyStr)
-                .digest('hex');
+            const sigCheck = crypto.createHmac('sha256', XROCKET_TOKEN)
+                .update(JSON.stringify(body)).digest('hex');
 
             if (sigCheck !== xrocketSig) {
                 console.error('xRocket signature mismatch');
                 return res.status(200).send('OK');
             }
 
-            if (body.status !== 'success') {
-                return res.status(200).send('OK');
-            }
+            if (body.status !== 'success') return res.status(200).send('OK');
 
-            // payload format: "{telegram_id}:{merchantOrderId}:{idr_amount}"
-            const [telegramIdStr, merchantOrderId, idrAmountStr] = (body.payload || '').split(':');
+            // payload: "{telegram_id}:{merchantOrderId}:{idr_amount}"
+            const [telegramIdStr, , idrAmountStr] = (body.payload || '').split(':');
             if (!telegramIdStr) return res.status(200).send('OK');
 
             const telegramId = parseInt(telegramIdStr);
             const idrAmount  = parseInt(idrAmountStr);
 
-            await addBalance(telegramId, idrAmount, 'xrocket', merchantOrderId);
+            await addBalance(telegramId, idrAmount, 'xrocket', body.payload);
 
-            await sendTelegramMessage(telegramId,
+            await sendTelegram(telegramId,
                 `✅ <b>Deposit Berhasil!</b>\n\n` +
                 `💰 <b>+Rp ${idrAmount.toLocaleString('id-ID')}</b> masuk ke saldo kamu\n` +
-                `🚀 Via: xRocket (${body.amount} ${body.currency})\n` +
-                `🔖 Ref: ${merchantOrderId}\n\n` +
+                `🚀 Via: xRocket (${body.amount} ${body.currency})\n\n` +
                 `Cek saldo terbaru di menu Dompet 👇`
             );
 
@@ -176,7 +145,6 @@ export default async function handler(req, res) {
 
     } catch (err) {
         console.error('payment/callback error:', err);
-        // Selalu return 200 ke payment gateway biar mereka gak retry terus
-        return res.status(200).send('OK');
+        return res.status(200).send('OK'); // selalu 200 ke payment gateway
     }
 }
