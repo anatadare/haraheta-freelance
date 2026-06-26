@@ -1134,10 +1134,18 @@
                         <div style="font-size:11px;color:var(--text-secondary);margin-top:4px;">Pastikan nomor tujuan sudah benar. Salah transfer tidak bisa direfund.</div>
                     </div>
 
-                    <div class="field-group">
-                        <label class="field-label" for="payAmountInput">Nominal</label>
+                    <!-- Input Rupiah (QRIS / Withdraw QRIS) -->
+                    <div class="field-group" id="idrAmountGroup">
+                        <label class="field-label" for="payAmountInput">Nominal (min Rp10.000)</label>
                         <div class="amount-input-wrap"><span>Rp</span><input type="text" inputmode="numeric" id="payAmountInput" placeholder="0"></div>
                         <div class="field-error" id="payAmountError">Minimal Rp10.000</div>
+                    </div>
+                    <!-- Input USDT (xRocket deposit) -->
+                    <div class="field-group" id="usdtAmountGroup" style="display:none;">
+                        <label class="field-label" for="payUsdtInput">Nominal USDT (min 1 USDT)</label>
+                        <div class="amount-input-wrap"><span>USDT</span><input type="text" inputmode="decimal" id="payUsdtInput" placeholder="0.00"></div>
+                        <div class="field-error" id="payUsdtError">Minimal 1 USDT</div>
+                        <div style="font-size:11px;color:var(--text-secondary);margin-top:6px;">≈ Rp <span id="payUsdtIdrEstimate">0</span> (estimasi kurs Rp16.300/USDT)</div>
                     </div>
 
                     <!-- Card VIP deposit > 500rb -->
@@ -2773,12 +2781,30 @@ ${link}`;
             document.getElementById('vipDepositCard').style.display = 'none';
             document.getElementById('payAmountInput').value = '';
             document.getElementById('payAmountError').classList.remove('show');
+            document.getElementById('payUsdtInput').value = '';
+            document.getElementById('payUsdtError').classList.remove('show');
+            document.getElementById('payUsdtIdrEstimate').textContent = '0';
+            document.getElementById('idrAmountGroup').style.display = 'block';
+            document.getElementById('usdtAmountGroup').style.display = 'none';
             document.getElementById('payConfirmBtn').disabled = true;
             document.getElementById('payConfirmBtn').style.display = 'block';
             document.getElementById('payConfirmBtn').textContent = 'Generate Pembayaran';
             document.getElementById('payLoadingText').style.display = 'none';
             document.getElementById('withdrawDestGroup').style.display = 'none';
+            currentQrisPaymentUrl    = null;
+            currentXrocketInvoiceUrl = null;
         }
+
+        // Input USDT (xRocket)
+        document.getElementById('payUsdtInput').addEventListener('input', (e) => {
+            const val  = parseFloat(e.target.value) || 0;
+            const idr  = Math.round(val * 16300);
+            document.getElementById('payUsdtIdrEstimate').textContent = idr.toLocaleString('id-ID');
+            const errEl = document.getElementById('payUsdtError');
+            const btnEl = document.getElementById('payConfirmBtn');
+            errEl.classList.toggle('show', e.target.value.length > 0 && val < 1);
+            btnEl.disabled = val < 1;
+        });
 
         // Input nominal deposit — cek limit Rp500rb
         document.getElementById('payAmountInput').addEventListener('input', (e) => {
@@ -2808,9 +2834,14 @@ ${link}`;
                 currentPayMethod = card.dataset.method;
                 document.getElementById('depositModal').classList.remove('active');
                 document.getElementById('payInstructionTitle').textContent =
-                    currentPayMethod === 'qris' ? '➕ Deposit via QRIS' : '➕ Deposit via xRocket';
+                    currentPayMethod === 'qris' ? '➕ Deposit via QRIS' : '➕ Deposit via xRocket (USDT)';
                 document.getElementById('withdrawDestGroup').style.display = 'none';
                 resetPayModal();
+                // xRocket pakai input USDT, QRIS pakai input IDR
+                const isXrocket = currentPayMethod === 'xrocket';
+                document.getElementById('idrAmountGroup').style.display  = isXrocket ? 'none' : 'block';
+                document.getElementById('usdtAmountGroup').style.display = isXrocket ? 'block' : 'none';
+                document.getElementById('payConfirmBtn').disabled = true;
                 document.getElementById('payInstructionModal').classList.add('active');
             });
         });
@@ -2846,6 +2877,7 @@ ${link}`;
 
             try {
                 if (currentPayMethod === 'withdraw_qris') {
+                    // Withdraw QRIS — input IDR
                     const dest = document.getElementById('withdrawDestInput').value.trim();
                     if (!dest) { alert('Masukkan nomor rekening / QRIS tujuan dulu.'); btn.style.display='block'; btn.disabled=false; loading.style.display='none'; return; }
                     const res = await fetch('/api/payment/withdraw', {
@@ -2861,28 +2893,41 @@ ${link}`;
                         document.getElementById('payInstructionModal').classList.remove('active');
                         alert('✅ Request withdraw diterima! Tim Haraheta akan transfer dalam 1x24 jam.');
                     } else { btn.style.display='block'; btn.disabled=false; alert(data.error || 'Gagal withdraw.'); }
-                } else {
+
+                } else if (currentPayMethod === 'xrocket') {
+                    // Deposit xRocket — input USDT langsung
+                    const usdtVal = parseFloat(document.getElementById('payUsdtInput').value) || 0;
+                    if (usdtVal < 1) { alert('Minimal deposit 1 USDT.'); btn.style.display='block'; btn.disabled=false; loading.style.display='none'; return; }
+                    if (!CURRENT_USER?.telegram_id) { alert('Buka dari Telegram ya.'); btn.style.display='block'; btn.disabled=false; loading.style.display='none'; return; }
+
                     const res = await fetch('/api/payment/create', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'x-internal-key': INTERNAL_KEY },
-                        body: JSON.stringify({ method: currentPayMethod, amount, telegram_id: CURRENT_USER.telegram_id })
+                        body: JSON.stringify({ method: 'xrocket', usdt_amount: usdtVal, telegram_id: CURRENT_USER.telegram_id })
                     });
                     const data = await res.json();
                     loading.style.display = 'none';
+                    if (!data.ok) { btn.style.display='block'; btn.disabled=false; alert(data.error || 'Gagal generate invoice.'); return; }
                     document.getElementById('payResultArea').style.display = 'block';
-                    if (currentPayMethod === 'qris') {
-                        document.getElementById('payQrisBox').style.display = 'block';
-                        // Simpan payment_url untuk dibuka saat user klik tombol
-                        currentQrisPaymentUrl = data.payment_url || null;
-                        const btn = document.getElementById('payQrisOpenBtn');
-                        if (!currentQrisPaymentUrl) {
-                            if (btn) btn.textContent = '⚠️ Link tidak tersedia, coba lagi';
-                        }
-                    } else {
-                        document.getElementById('payXrocketBox').style.display = 'block';
-                        document.getElementById('payXrocketAmount').textContent = `${data.usdt_amount} USDT`;
-                        currentXrocketInvoiceUrl = data.invoice_url;
-                    }
+                    document.getElementById('payXrocketBox').style.display = 'block';
+                    document.getElementById('payXrocketAmount').textContent = `${data.usdt_amount} USDT`;
+                    currentXrocketInvoiceUrl = data.invoice_url;
+
+                } else {
+                    // Deposit QRIS — input IDR
+                    const res = await fetch('/api/payment/create', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'x-internal-key': INTERNAL_KEY },
+                        body: JSON.stringify({ method: 'qris', amount, telegram_id: CURRENT_USER.telegram_id })
+                    });
+                    const data = await res.json();
+                    loading.style.display = 'none';
+                    if (!data.ok) { btn.style.display='block'; btn.disabled=false; alert(data.error || 'Gagal generate QRIS.'); return; }
+                    document.getElementById('payResultArea').style.display = 'block';
+                    document.getElementById('payQrisBox').style.display = 'block';
+                    currentQrisPaymentUrl = data.payment_url || null;
+                    const qBtn = document.getElementById('payQrisOpenBtn');
+                    if (!currentQrisPaymentUrl && qBtn) qBtn.textContent = '⚠️ Link tidak tersedia, coba lagi';
                 }
             } catch (err) {
                 loading.style.display = 'none'; btn.style.display = 'block'; btn.disabled = false;
