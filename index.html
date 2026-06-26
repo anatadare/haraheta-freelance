@@ -1150,9 +1150,10 @@
                     <!-- Area QRIS / xRocket hasil generate -->
                     <div id="payResultArea" style="display:none;text-align:center;padding:8px 0 12px;">
                         <div id="payQrisBox" style="display:none;">
-                            <p style="font-size:13px;color:var(--text-secondary);margin-bottom:10px;">Scan QRIS ini di aplikasi bank kamu</p>
-                            <img id="payQrisImage" src="" alt="QRIS" style="width:200px;height:200px;border-radius:var(--radius-md);border:1px solid var(--divider);">
-                            <p style="font-size:12px;color:var(--danger);margin-top:8px;">⏳ Berlaku 10 menit</p>
+                            <p style="font-size:13px;color:var(--text-secondary);margin-bottom:10px;">Klik tombol di bawah untuk membuka halaman pembayaran QRIS bayar.gg</p>
+                            <button id="payQrisOpenBtn" onclick="openPaymentLink()" class="confirm-btn" style="margin-bottom:10px;">🏦 Buka Halaman Pembayaran</button>
+                            <p style="font-size:12px;color:var(--danger);">⏳ Link berlaku 10 menit — bayar sebelum kedaluwarsa</p>
+                            <p style="font-size:11px;color:var(--text-secondary);margin-top:6px;">Setelah bayar, saldo otomatis bertambah dalam beberapa detik.</p>
                         </div>
                         <div id="payXrocketBox" style="display:none;">
                             <p style="font-size:13px;color:var(--text-secondary);margin-bottom:10px;">Bayar lewat xRocket</p>
@@ -2744,6 +2745,14 @@ ${link}`;
         const QRIS_LIMIT = 500000;
         let currentPayMethod = null;
         let currentXrocketInvoiceUrl = null;
+        let currentQrisPaymentUrl    = null;
+
+        function openPaymentLink() {
+            const url = currentQrisPaymentUrl;
+            if (!url) { alert('Link pembayaran tidak tersedia, coba generate ulang.'); return; }
+            if (tg) tg.openLink(url);
+            else window.open(url, '_blank');
+        }
 
         function openVIPChat() {
             const msg = encodeURIComponent('Halo, saya ingin deposit lebih dari Rp500.000 di Haraheta Freelance.');
@@ -2863,17 +2872,11 @@ ${link}`;
                     document.getElementById('payResultArea').style.display = 'block';
                     if (currentPayMethod === 'qris') {
                         document.getElementById('payQrisBox').style.display = 'block';
-                        const img = document.getElementById('payQrisImage');
-                        // Prioritas: qr_image_url dari bayar.gg → generate dari qr_string → fallback link
-                        if (data.qr_image_url) {
-                            img.src = data.qr_image_url;
-                        } else if (data.qr_string) {
-                            img.src = `https://chart.googleapis.com/chart?cht=qr&chs=300x300&chl=${encodeURIComponent(data.qr_string)}`;
-                        } else if (data.payment_url) {
-                            // Fallback: tampilkan link bayar.gg jika QR tidak tersedia
-                            document.getElementById('payQrisBox').innerHTML =
-                                `<p style="font-size:13px;color:var(--text-secondary);margin-bottom:10px;">Klik link di bawah untuk membuka halaman pembayaran</p>
-                                <button onclick="if(tg)tg.openLink('${data.payment_url}');else window.open('${data.payment_url}','_blank')" class="confirm-btn">🏦 Buka Halaman Bayar</button>`;
+                        // Simpan payment_url untuk dibuka saat user klik tombol
+                        currentQrisPaymentUrl = data.payment_url || null;
+                        const btn = document.getElementById('payQrisOpenBtn');
+                        if (!currentQrisPaymentUrl) {
+                            if (btn) btn.textContent = '⚠️ Link tidak tersedia, coba lagi';
                         }
                     } else {
                         document.getElementById('payXrocketBox').style.display = 'block';
