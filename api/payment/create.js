@@ -88,15 +88,18 @@ export default async function handler(req, res) {
                 qrImageUrl = `https://www.bayar.gg/qris-info/api/qr.php?data=${encodeURIComponent(invoice.qris_string)}`;
             }
 
+            // Pastikan payment_url selalu ada — fallback ke URL bayar.gg default
+            const paymentUrl = invoice.payment_url
+                || invoice.paymentUrl
+                || `https://www.bayar.gg/pay/${invoice.invoice_id}`;
+
             return res.status(200).json({
                 ok:           true,
                 method:       'qris',
                 invoice_id:   invoice.invoice_id,
-                payment_url:  invoice.payment_url,   // link checkout bayar.gg (bisa dibuka user)
-                qr_image_url: qrImageUrl,             // gambar QR langsung
-                qr_string:    invoice.qris_string || null,
-                final_amount: invoice.final_amount,
-                expires_at:   invoice.expires_at,
+                payment_url:  paymentUrl,
+                final_amount: invoice.final_amount || amount,
+                expires_at:   invoice.expires_at || null,
                 amount
             });
         }
