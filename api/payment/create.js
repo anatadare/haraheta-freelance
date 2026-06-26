@@ -111,9 +111,18 @@ export default async function handler(req, res) {
             });
         }
 
-        // ── xRocket (USDT) ───────────────────────────────────────
+        // ── xRocket (USDT input langsung) ───────────────────────
         if (method === 'xrocket') {
-            const usdtAmount = (amount / 16300).toFixed(2);
+            // usdt_amount dikirim langsung dari client (user input USDT)
+            const usdtAmount = req.body.usdt_amount
+                ? parseFloat(req.body.usdt_amount).toFixed(2)
+                : (amount / 16300).toFixed(2);
+
+            if (parseFloat(usdtAmount) < 1) {
+                return res.status(400).json({ error: 'Minimal deposit 1 USDT' });
+            }
+
+            const orderId = `DEP-${telegram_id}-${Date.now()}`;
 
             const xrocketRes = await fetch('https://pay.xrocket.tg/tg-invoices', {
                 method: 'POST',
@@ -124,8 +133,8 @@ export default async function handler(req, res) {
                 body: JSON.stringify({
                     currency:    'USDT',
                     amount:      usdtAmount,
-                    description: `Deposit Haraheta Freelance (Rp${Number(amount).toLocaleString('id-ID')})`,
-                    payload:     `${telegram_id}:DEP-${telegram_id}-${Date.now()}:${amount}`,
+                    description: `Deposit Haraheta Freelance`,
+                    payload:     `${telegram_id}:${orderId}:${usdtAmount}`,  // simpan USDT di payload
                     callbackUrl: `${APP_URL}/api/payment/callback`
                 })
             });
@@ -144,8 +153,7 @@ export default async function handler(req, res) {
                 ok:          true,
                 method:      'xrocket',
                 invoice_url: xrocketData.result.link,
-                usdt_amount: usdtAmount,
-                idr_amount:  amount
+                usdt_amount: usdtAmount
             });
         }
 

@@ -122,19 +122,22 @@ export default async function handler(req, res) {
 
             if (body.status !== 'success') return res.status(200).send('OK');
 
-            // payload: "{telegram_id}:{merchantOrderId}:{idr_amount}"
-            const [telegramIdStr, , idrAmountStr] = (body.payload || '').split(':');
-            if (!telegramIdStr) return res.status(200).send('OK');
+            // payload: "{telegram_id}:{orderId}:{usdt_amount}"
+            const parts = (body.payload || '').split(':');
+            if (!parts[0]) return res.status(200).send('OK');
 
-            const telegramId = parseInt(telegramIdStr);
-            const idrAmount  = parseInt(idrAmountStr);
+            const telegramId = parseInt(parts[0]);
+            const usdtAmount = parts[2] || body.amount || '0';
+
+            // Konversi USDT ke IDR untuk tambah saldo (kurs 16.300)
+            const idrAmount = Math.round(parseFloat(usdtAmount) * 16300);
 
             await addBalance(telegramId, idrAmount, 'xrocket', body.payload);
 
             await sendTelegram(telegramId,
-                `✅ <b>Deposit Berhasil!</b>\n\n` +
-                `💰 <b>+Rp ${idrAmount.toLocaleString('id-ID')}</b> masuk ke saldo kamu\n` +
-                `🚀 Via: xRocket (${body.amount} ${body.currency})\n\n` +
+                `✅ <b>Deposit xRocket Berhasil!</b>\n\n` +
+                `🚀 <b>${usdtAmount} USDT</b> sudah masuk\n` +
+                `💰 +Rp ${idrAmount.toLocaleString('id-ID')} ke saldo kamu\n\n` +
                 `Cek saldo terbaru di menu Dompet 👇`
             );
 
