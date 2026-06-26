@@ -64,14 +64,21 @@ export default async function handler(req, res) {
             // Log response untuk debug
             console.log('bayar.gg response:', JSON.stringify(bayarData));
 
+            // DEBUG: selalu return raw response dulu buat lihat struktur
+            console.log('bayar.gg FULL response:', JSON.stringify(bayarData));
+
             if (!bayarData.success || !bayarData.data) {
                 return res.status(500).json({
                     error: 'Gagal generate QRIS',
-                    detail: bayarData
+                    detail: bayarData,
+                    debug: bayarData
                 });
             }
 
             const invoice = bayarData.data;
+            // DEBUG: log field invoice
+            console.log('invoice fields:', Object.keys(invoice));
+            console.log('invoice data:', JSON.stringify(invoice));
 
             // Catat transaksi pending (invoice_id buat matching di callback)
             await dbPost('transactions', {
