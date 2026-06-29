@@ -1,6 +1,6 @@
 // ============================================================
 // POST /api/payment/callback
-// Terima notifikasi dari bayar.gg & xRocket
+// Terima notifikasi dari bayar.gg, xRocket (deposit & withdrawal)
 // ============================================================
 
 const BAYARGG_WEBHOOK_SECRET = process.env.BAYARGG_WEBHOOK_SECRET;
@@ -108,7 +108,7 @@ export default async function handler(req, res) {
         }
 
         // ── Callback dari xRocket ────────────────────────────────
-        if (body.type === 'invoice') {
+        if (body.type === 'invoice' || body.type === 'transfer') {
             const xrocketSig = req.headers['rocket-pay-signature'];
             if (!xrocketSig) return res.status(200).send('OK');
 
@@ -120,28 +120,88 @@ export default async function handler(req, res) {
                 return res.status(200).send('OK');
             }
 
-            if (body.status !== 'success') return res.status(200).send('OK');
+            // ── DEPOSIT xRocket (invoice) ──────────────────────────
+            if (body.type === 'invoice' && body.status === 'success') {
+                // payload: "{telegram_id}:{orderId}:{usdt_amount}"
+                const parts = (body.payload || '').split(':');
+                if (!parts[0]) return res.status(200).send('OK');
 
-            // payload: "{telegram_id}:{orderId}:{usdt_amount}"
-            const parts = (body.payload || '').split(':');
-            if (!parts[0]) return res.status(200).send('OK');
+                const telegramId = parseInt(parts[0]);
+                const usdtAmount = parts[2] || body.amount || '0';
 
-            const telegramId = parseInt(parts[0]);
-            const usdtAmount = parts[2] || body.amount || '0';
+                // Konversi USDT ke IDR untuk tambah saldo (kurs 16.300)
+                const idrAmount = Math.round(parseFloat(usdtAmount) * 16300);
 
-            // Konversi USDT ke IDR untuk tambah saldo (kurs 16.300)
-            const idrAmount = Math.round(parseFloat(usdtAmount) * 16300);
+                await addBalance(telegramId, idrAmount, 'xrocket', body.payload);
 
-            await addBalance(telegramId, idrAmount, 'xrocket', body.payload);
+                await sendTelegram(telegramId,
+                    `✅ <b>Deposit xRocket Berhasil!</b>\n\n` +
+                    `🚀 <b>${usdtAmount} USDT</b> sudah masuk\n` +
+                    `💰 +Rp ${idrAmount.toLocaleString('id-ID')} ke saldo kamu\n\n` +
+                    `Cek saldo terbaru di menu Dompet 👇`
+                );
 
-            await sendTelegram(telegramId,
-                `✅ <b>Deposit xRocket Berhasil!</b>\n\n` +
-                `🚀 <b>${usdtAmount} USDT</b> sudah masuk\n` +
-                `💰 +Rp ${idrAmount.toLocaleString('id-ID')} ke saldo kamu\n\n` +
-                `Cek saldo terbaru di menu Dompet 👇`
-            );
+                return res.status(200).send('SUCCESS');
+            }
 
-            return res.status(200).send('SUCCESS');
+            // ── WITHDRAWAL xRocket (transfer) ──────────────────────
+            if (body.type === 'transfer') {
+                const parts = (body.payload || '').split(':');
+                if (!parts[0]) return res.status(200).send('OK');
+
+                const telegramId = parseInt(parts[0]);
+                const orderId = parts[1];
+                const usdtAmount = parts[2];
+
+                // Cari transaction record
+                const transactions = await dbGet('transactions', `?note=like.*${orderId}*&limit=1`);
+                const txn = transactions[0];
+
+                if (!txn) {
+                    console.error('Transaction tidak ditemukan:', orderId);
+                    return res.status(200).send('OK');
+                }
+
+                if (body.status === 'success') {
+                    // ── Update transaction status to SUCCESS ────────
+                    await dbPatch('transactions', `?id=eq.${txn.id}`, {
+                        status: 'completed'
+                    });
+
+                    await sendTelegram(telegramId,
+                        `✅ <b>Withdrawal Berhasil!</b>\n\n` +
+                        `🚀 <b>${usdtAmount} USDT</b> sudah dikirim\n` +
+                        `📋 Order ID: ${orderId}\n` +
+                        `📍 TX Hash: <code>${body.txHash || 'processing'}</code>\n\n` +
+                        `Cek transaction di blockchain explorer 👇`
+                    );
+                } else if (body.status === 'failed') {
+                    // ── REFUND balance kalo gagal ────────────────────
+                    const user = await dbGet('users', `?telegram_id=eq.${telegramId}&limit=1`);
+                    const userRecord = user[0];
+
+                    if (userRecord) {
+                        const refundAmount = txn.amount;
+                        await dbPatch('users', `?telegram_id=eq.${telegramId}`, {
+                            balance_idr: userRecord.balance_idr + refundAmount
+                        });
+                    }
+
+                    await dbPatch('transactions', `?id=eq.${txn.id}`, {
+                        status: 'failed'
+                    });
+
+                    await sendTelegram(telegramId,
+                        `❌ <b>Withdrawal Gagal!</b>\n\n` +
+                        `🚀 <b>${usdtAmount} USDT</b> tidak berhasil dikirim\n` +
+                        `📋 Order ID: ${orderId}\n` +
+                        `❌ Reason: ${body.reason || 'Unknown error'}\n\n` +
+                        `💰 Saldo kamu sudah dikembalikan. Coba lagi nanti 👇`
+                    );
+                }
+
+                return res.status(200).send('SUCCESS');
+            }
         }
 
         return res.status(200).send('OK');
