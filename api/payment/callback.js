@@ -68,10 +68,9 @@ export default async function handler(req, res) {
     console.log('callback received:', JSON.stringify(body).slice(0, 200));
 
     try {
-        // ── Callback dari bayar.gg ───────────────────────────────
-        // Docs: event = "payment.paid", header X-Webhook-Signature
-        // Signature: HMAC SHA256 dari "{invoice_id}|{status}|{final_amount}|{timestamp}"
+        // ── Callback dari bayar.gg (DEPOSIT & PAYOUT) ──────────────
         if (body.event === 'payment.paid') {
+            // ── DEPOSIT Payment Callback ───────────────────────────
             // Verifikasi signature
             const sigData     = `${body.invoice_id}|${body.status}|${body.final_amount}|${timestamp}`;
             const expectedSig = crypto.createHmac('sha256', BAYARGG_WEBHOOK_SECRET)
@@ -103,6 +102,91 @@ export default async function handler(req, res) {
                 `🔖 Ref: ${body.invoice_id}\n\n` +
                 `Cek saldo terbaru di menu Dompet 👇`
             );
+
+            return res.status(200).send('SUCCESS');
+        }
+
+        // ── Callback dari bayar.gg PAYOUT (E-Wallet) ──────────────
+        if (body.event === 'payout.completed' || body.event === 'payout.failed') {
+            // Verifikasi signature
+            const sigData     = `${body.reference_id}|${body.status}|${body.amount}|${timestamp}`;
+            const expectedSig = crypto.createHmac('sha256', BAYARGG_WEBHOOK_SECRET)
+                .update(sigData).digest('hex');
+
+            if (expectedSig !== signature) {
+                console.error('bayar.gg payout signature mismatch');
+                return res.status(200).send('INVALID SIGNATURE');
+            }
+
+            // Extract telegram_id dari reference_id: "EW-{telegram_id}-{timestamp}"
+            const refMatch = (body.reference_id || '').match(/EW-(\d+)-/);
+            if (!refMatch) {
+                console.error('Tidak bisa parse telegram_id dari reference_id:', body.reference_id);
+                return res.status(200).send('OK');
+            }
+
+            const telegramId = parseInt(refMatch[1]);
+            const orderId = body.reference_id;
+
+            // Cari transaction record
+            const transactions = await dbGet('transactions', `?note=like.*${orderId}*&limit=1`);
+            const txn = transactions[0];
+
+            if (!txn) {
+                console.error('Transaction tidak ditemukan:', orderId);
+                return res.status(200).send('OK');
+            }
+
+            if (body.status === 'completed' || body.event === 'payout.completed') {
+                // ── UPDATE transaction status to SUCCESS ────────────
+                await dbPatch('transactions', `?id=eq.${txn.id}`, {
+                    status: 'completed'
+                });
+
+                const metadata = txn.metadata ? JSON.parse(txn.metadata) : {};
+                const ewalletMethod = metadata.ewallet_method || 'e-wallet';
+                const phone = metadata.phone || '';
+
+                await sendTelegram(telegramId,
+                    `✅ <b>Withdrawal E-Wallet Berhasil!</b>\n\n` +
+                    `💸 <b>Rp ${body.amount.toLocaleString('id-ID')}</b> sudah dikirim\n` +
+                    `📞 ${ewalletMethod.toUpperCase()} - ${phone}\n` +
+                    `📋 Order ID: ${orderId}\n` +
+                    `📍 Ref: <code>${body.payout_id || 'processing'}</code>\n\n` +
+                    `Cek saldo e-wallet kamu 👇`
+                );
+            } else if (body.status === 'failed' || body.event === 'payout.failed') {
+                // ── REFUND balance kalo gagal ────────────────────
+                const user = await dbGet('users', `?telegram_id=eq.${telegramId}&limit=1`);
+                const userRecord = user[0];
+
+                if (userRecord) {
+                    // Refund = amount + fee
+                    const metadata = txn.metadata ? JSON.parse(txn.metadata) : {};
+                    const fee = metadata.fee || 10000;
+                    const refundAmount = txn.amount + fee;
+                    
+                    await dbPatch('users', `?telegram_id=eq.${telegramId}`, {
+                        balance_idr: userRecord.balance_idr + refundAmount
+                    });
+                }
+
+                await dbPatch('transactions', `?id=eq.${txn.id}`, {
+                    status: 'failed'
+                });
+
+                const metadata = txn.metadata ? JSON.parse(txn.metadata) : {};
+                const ewalletMethod = metadata.ewallet_method || 'e-wallet';
+
+                await sendTelegram(telegramId,
+                    `❌ <b>Withdrawal E-Wallet Gagal!</b>\n\n` +
+                    `💸 <b>Rp ${body.amount.toLocaleString('id-ID')}</b> tidak berhasil dikirim\n` +
+                    `📞 ${ewalletMethod.toUpperCase()}\n` +
+                    `📋 Order ID: ${orderId}\n` +
+                    `❌ Reason: ${body.reason || 'Unknown error'}\n\n` +
+                    `💰 Saldo + biaya sudah dikembalikan. Coba lagi nanti 👇`
+                );
+            }
 
             return res.status(200).send('SUCCESS');
         }
