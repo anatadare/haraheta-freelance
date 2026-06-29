@@ -599,6 +599,62 @@
         }
         .upload-box:active { background: #e2e8f0; }
         .upload-icon { font-size: 32px; margin-bottom: 8px; color: var(--secondary); display: block;}
+
+        /* ===== WITHDRAWAL MODAL & FORMS ===== */
+        .withdrawal-tabs {
+            display: flex; background: var(--surface); border-radius: var(--radius-lg);
+            padding: 4px; gap: 4px; margin-bottom: 16px; box-shadow: var(--shadow-card);
+        }
+        .withdrawal-tab-btn {
+            flex: 1; text-align: center; padding: 10px; border: none; background: transparent;
+            border-radius: var(--radius-md); font-size: 12px; font-weight: 600; color: var(--text-secondary);
+            cursor: pointer; transition: all 0.2s;
+        }
+        .withdrawal-tab-btn.active {
+            background: var(--accent-gradient); color: white; box-shadow: 0 4px 10px rgba(59,130,246,0.25);
+        }
+
+        .withdrawal-content { display: none; }
+        .withdrawal-content.active { display: block; }
+
+        .ewallet-methods {
+            display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 16px;
+        }
+        .ewallet-method-btn {
+            padding: 12px; border-radius: var(--radius-md); border: 1px solid var(--divider);
+            background: white; font-size: 13px; font-weight: 600; color: var(--text-secondary);
+            cursor: pointer; text-align: center; transition: all 0.2s; display: flex; flex-direction: column;
+            align-items: center; gap: 6px;
+        }
+        .ewallet-method-btn .emoji { font-size: 24px; }
+        .ewallet-method-btn.active {
+            background: var(--accent-soft); border-color: var(--accent); color: var(--accent);
+        }
+
+        .amount-estimate-box {
+            background: var(--secondary-soft); border-radius: var(--radius-md);
+            padding: 12px 14px; margin-bottom: 16px; font-size: 13px; color: var(--text-primary);
+        }
+
+        .withdrawal-address-help {
+            background: var(--bg); border-left: 3px solid var(--accent);
+            border-radius: var(--radius-md); padding: 10px 12px; margin-bottom: 12px;
+            font-size: 12px; color: var(--text-secondary); line-height: 1.5;
+        }
+
+        .withdrawal-toast {
+            position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+            background: var(--surface); border: 2px solid var(--success);
+            padding: 12px 16px; border-radius: var(--radius-md); box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+            display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 600;
+            color: var(--success); animation: slideInUp 0.3s ease; z-index: 9999;
+            white-space: nowrap; max-width: 90%;
+            opacity: 0; pointer-events: none;
+        }
+        .withdrawal-toast.show {
+            opacity: 1;
+            animation: slideInUp 0.3s ease forwards;
+        }
     </style>
 </head>
 <body>
@@ -1200,6 +1256,104 @@
                     <div id="xrocketWithdrawLoading" style="display:none;text-align:center;font-size:13px;color:var(--text-secondary);margin-top:10px;">⏳ Memproses withdraw...</div>
                 </div>
             </div>
+
+            <!-- Withdrawal Modal (xRocket & E-Wallet) -->
+            <div class="modal-overlay" id="withdrawalModal">
+                <div class="modal-sheet">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h3>💸 Withdraw Saldo</h3>
+                        <button id="closeWithdrawalModal" style="background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-secondary);">✕</button>
+                    </div>
+
+                    <!-- Tabs -->
+                    <div class="withdrawal-tabs">
+                        <button class="withdrawal-tab-btn active" data-withdrawal-tab="xrocket">🚀 xRocket</button>
+                        <button class="withdrawal-tab-btn" data-withdrawal-tab="ewallet">💳 E-Wallet</button>
+                    </div>
+
+                    <!-- xRocket Content -->
+                    <div id="xrocketWithdrawContent" class="withdrawal-content active">
+                        <div class="withdrawal-address-help">
+                            📍 <strong>TON/USDT Wallet Address</strong><br>
+                            Masukkan address dompet TON atau USDT kamu dari xRocket/Tonkeeper/OKX Wallet, dsb.
+                        </div>
+
+                        <div class="field-group">
+                            <label class="field-label" for="xrocketAmountInput">Jumlah Withdraw (Rp)</label>
+                            <div class="amount-input-wrap">
+                                <span>Rp</span>
+                                <input type="text" inputmode="numeric" id="xrocketAmountInput" placeholder="Min. Rp 50.000">
+                            </div>
+                            <div class="field-error" id="xrocketAmountError" style="margin-top: 6px;">Minimal withdraw Rp 50.000</div>
+                            <div class="amount-estimate-box" style="margin-top: 10px;">
+                                Estimasi: <strong id="xrocketUsdtEstimate">0 USDT</strong>
+                            </div>
+                        </div>
+
+                        <div class="field-group">
+                            <label class="field-label" for="xrocketAddressInput">TON/USDT Wallet Address</label>
+                            <input type="text" class="textarea-input" id="xrocketAddressInput" style="min-height: 50px;" placeholder="EQ... atau 0x...">
+                            <div class="field-error" id="xrocketAddressError"></div>
+                        </div>
+
+                        <button class="confirm-btn" id="btnXrocketWithdraw">Withdraw Sekarang</button>
+                    </div>
+
+                    <!-- E-Wallet Content -->
+                    <div id="ewalletWithdrawContent" class="withdrawal-content" style="display: none;">
+                        <div class="field-group">
+                            <label class="field-label">Pilih Metode E-Wallet</label>
+                            <div class="ewallet-methods">
+                                <button class="ewallet-method-btn" data-ewallet-method="dana">
+                                    <span class="emoji">💜</span>
+                                    <span>DANA</span>
+                                </button>
+                                <button class="ewallet-method-btn" data-ewallet-method="ovo">
+                                    <span class="emoji">🟣</span>
+                                    <span>OVO</span>
+                                </button>
+                                <button class="ewallet-method-btn" data-ewallet-method="gopay">
+                                    <span class="emoji">🔵</span>
+                                    <span>GoPay</span>
+                                </button>
+                                <button class="ewallet-method-btn" data-ewallet-method="linkaja">
+                                    <span class="emoji">🟡</span>
+                                    <span>LinkAja</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="field-group">
+                            <label class="field-label" for="ewalletAmountInput">Jumlah Withdraw (Rp)</label>
+                            <div class="amount-input-wrap">
+                                <span>Rp</span>
+                                <input type="text" inputmode="numeric" id="ewalletAmountInput" placeholder="Min. Rp 50.000">
+                            </div>
+                            <div class="field-error" id="ewalletAmountError" style="margin-top: 6px;">Minimal withdraw Rp 50.000</div>
+                            <div class="amount-estimate-box" style="margin-top: 10px;">
+                                <div id="ewalletFeeEstimate">Rp 0 + Rp 10.000 (biaya) = <strong>Rp 10.000</strong></div>
+                            </div>
+                        </div>
+
+                        <div class="field-group">
+                            <label class="field-label" for="ewalletPhoneInput">Nomor Telepon E-Wallet</label>
+                            <div class="amount-input-wrap">
+                                <span>+62</span>
+                                <input type="text" inputmode="tel" id="ewalletPhoneInput" placeholder="812345678 (tanpa 0 di depan)">
+                            </div>
+                        </div>
+
+                        <button class="confirm-btn" id="btnEwalletWithdraw">Withdraw Sekarang</button>
+                    </div>
+
+                    <p style="font-size: 11px; color: var(--text-secondary); margin-top: 12px; text-align: center; line-height: 1.5;">
+                        ⏳ Withdrawal sedang diproses. Kamu akan menerima notifikasi Telegram saat selesai.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Withdrawal Toast -->
+            <div id="withdrawalToast" class="withdrawal-toast"></div>
         </div>
 
         <!-- 5. PROFILE PAGE -->
@@ -2980,5 +3134,8 @@ ${link}`;
             }
         });
     </script>
+
+    <!-- Withdrawal Manager -->
+    <script src="js/withdrawalManager.js"></script>
 </body>
 </html>
