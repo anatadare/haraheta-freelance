@@ -6,6 +6,7 @@
 class WithdrawalManager {
     constructor() {
         this.currentMethod = 'xrocket'; // default method
+        this.selectedEwalletMethod = null;
         this.setupEventListeners();
     }
 
@@ -58,6 +59,7 @@ class WithdrawalManager {
     }
 
     selectEwalletMethod(method) {
+        this.selectedEwalletMethod = method;
         document.querySelectorAll('[data-ewallet-method]').forEach(btn => {
             btn.classList.toggle('active', btn.getAttribute('data-ewallet-method') === method);
         });
@@ -174,7 +176,7 @@ class WithdrawalManager {
     async processEwalletWithdraw() {
         const amount = parseInt(document.getElementById('ewalletAmountInput')?.value) || 0;
         const phone = document.getElementById('ewalletPhoneInput')?.value.trim() || '';
-        const method = document.querySelector('[data-ewallet-method].active')?.getAttribute('data-ewallet-method');
+        const method = this.selectedEwalletMethod;
 
         if (amount < 50000) {
             alert('Minimal withdraw Rp 50.000');
@@ -227,6 +229,8 @@ class WithdrawalManager {
             // Reset form
             document.getElementById('ewalletAmountInput').value = '';
             document.getElementById('ewalletPhoneInput').value = '';
+            this.selectedEwalletMethod = null;
+            document.querySelectorAll('[data-ewallet-method]').forEach(btn => btn.classList.remove('active'));
             this.updateEwalletEstimate();
 
             // Close modal after 2 seconds
