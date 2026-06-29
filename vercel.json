@@ -8,6 +8,7 @@
     { "src": "api/payment/create.js", "use": "@vercel/node" },
     { "src": "api/payment/callback.js", "use": "@vercel/node" },
     { "src": "api/payment/withdraw.js", "use": "@vercel/node" },
+    { "src": "api/payment/withdraw-ewallet.js", "use": "@vercel/node" },
     { "src": "api/referral/track.js", "use": "@vercel/node" }
   ],
   "routes": [
@@ -15,6 +16,7 @@
     { "src": "/api/payment/create", "dest": "/api/payment/create.js" },
     { "src": "/api/payment/callback", "dest": "/api/payment/callback.js" },
     { "src": "/api/payment/withdraw", "dest": "/api/payment/withdraw.js" },
+    { "src": "/api/payment/withdraw-ewallet", "dest": "/api/payment/withdraw-ewallet.js" },
     { "src": "/api/referral/track", "dest": "/api/referral/track.js" },
     { "src": "/api/notify", "dest": "/api/notify.js" },
     { "src": "/api/webhook", "dest": "/api/webhook.js" },
