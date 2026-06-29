@@ -261,7 +261,7 @@
         
         .btn-full { width: 100%; text-align: center; margin-top: 10px; padding: 12px; }
 
-        /* ===== MENU BAWAH (5 ITEM) ===== */
+        /* ===== MENU BAWAH ===== */
         .bottom-nav {
             position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
             width: 100%; max-width: 430px; background: rgba(255,255,255,0.9);
@@ -281,44 +281,11 @@
         }
         .nav-icon { font-size: 22px; }
 
-        /* Umum - Judul Halaman */
+        /* Umum */
         .page-title { font-size: 20px; font-weight: 700; color: var(--primary); margin-bottom: 8px; }
         .page-subtitle { font-size: 13px; color: var(--text-secondary); margin-bottom: 16px; }
 
-        /* Profile Specific */
-        .profile-header { display: flex; flex-direction: column; align-items: center; gap: 12px; margin-bottom: 6px; }
-        .avatar-large {
-            width: 80px; height: 80px; background: var(--accent-gradient); border-radius: 50%;
-            display: flex; align-items: center; justify-content: center; font-size: 36px;
-            color: white; font-weight: 700; box-shadow: 0 8px 20px rgba(59,130,246,0.3);
-        }
-        .profile-name { font-size: 20px; font-weight: 700; color: var(--text-primary); }
-        .profile-username { font-size: 14px; color: var(--text-secondary); }
-        .profile-id {
-            font-size: 12px; color: var(--text-secondary); background: #f1f5f9;
-            padding: 4px 10px; border-radius: 20px; display: flex; align-items: center; gap: 6px;
-        }
-        .badge-row { display: flex; gap: 6px; }
-        .badge {
-            font-size: 11px; font-weight: 600; padding: 4px 12px; border-radius: 20px;
-            background: var(--accent-soft); color: var(--accent);
-        }
-        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-        .stat-card {
-            background: var(--surface); border-radius: var(--radius-lg); padding: 14px;
-            box-shadow: var(--shadow-card); text-align: center;
-        }
-        .stat-value { font-size: 22px; font-weight: 700; color: var(--accent); }
-        .stat-label { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
-        
-        .referral-menu {
-            background: var(--surface); border-radius: var(--radius-xl); padding: 16px;
-            box-shadow: var(--shadow-card); display: flex; justify-content: space-between;
-            align-items: center; cursor: pointer;
-        }
-        .referral-menu:active { background: #f8fafc; }
-
-        /* ===== MODAL STYLES ===== */
+        /* Modal */
         .modal-overlay {
             display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
             background: rgba(15,23,42,0.4); backdrop-filter: blur(4px); z-index: 100;
@@ -337,28 +304,7 @@
         }
         .modal-sheet h3 { font-size: 18px; margin-bottom: 20px; font-weight: 600; color: var(--primary); }
 
-        .option-card {
-            display: flex; align-items: center; justify-content: space-between;
-            padding: 16px; border: 1px solid var(--divider); border-radius: var(--radius-lg);
-            margin-bottom: 12px; cursor: pointer; background: #ffffff;
-            transition: all 0.2s;
-        }
-        .option-card:active { background: var(--accent-soft); border-color: var(--accent); }
-        .option-left { display: flex; align-items: center; gap: 12px; }
-        .option-icon {
-            width: 48px; height: 48px; border-radius: 12px;
-            background: #f1f5f9; display: flex; align-items: center; justify-content: center; font-size: 24px;
-        }
-        .option-text { font-weight: 500; color: var(--text-primary); }
-        .option-text small { display: block; font-size: 12px; color: var(--text-secondary); margin-top: 4px; font-weight: 400; }
-        
-        .cancel-btn {
-            width: 100%; margin-top: 8px; padding: 12px; background: transparent;
-            border: 1px solid var(--divider); border-radius: var(--radius-md); font-weight: 600;
-            cursor: pointer; font-size: 15px; color: var(--text-primary);
-        }
-
-        /* Wallet Specific */
+        /* Wallet */
         .balance-card {
             background: var(--surface); border-radius: var(--radius-2xl); padding: 24px;
             box-shadow: var(--shadow-card); text-align: center;
@@ -386,9 +332,9 @@
         .tx-date { font-size: 12px; color: var(--text-secondary); }
         .tx-amount { font-weight: 600; font-size: 14px; }
         .tx-amount.plus { color: var(--success); } 
-        .tx-amount.minus { color: var(--danger); } 
+        .tx-amount.minus { color: var(--danger); }
 
-        /* Form Inputs (Digunakan di Deploy & Submit) */
+        /* Form */
         .field-group { margin-bottom: 16px; }
         .field-label { display: block; font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 8px; }
         .amount-input-wrap {
@@ -413,9 +359,15 @@
             cursor: pointer; box-shadow: 0 4px 12px rgba(59,130,246,0.3); margin-top: 4px;
         }
         .confirm-btn:active { transform: scale(0.97); }
-        .confirm-btn:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; transform: none; }
+        .confirm-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-        /* ===== WITHDRAWAL MODAL & FORMS ===== */
+        .cancel-btn {
+            width: 100%; margin-top: 8px; padding: 12px; background: transparent;
+            border: 1px solid var(--divider); border-radius: var(--radius-md); font-weight: 600;
+            cursor: pointer; font-size: 15px; color: var(--text-primary);
+        }
+
+        /* ===== WITHDRAWAL STYLES ===== */
         .withdrawal-tabs {
             display: flex; background: var(--surface); border-radius: var(--radius-lg);
             padding: 4px; gap: 4px; margin-bottom: 16px; box-shadow: var(--shadow-card);
@@ -457,20 +409,6 @@
             font-size: 12px; color: var(--text-secondary); line-height: 1.5;
         }
 
-        .withdrawal-toast {
-            position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
-            background: var(--surface); border: 2px solid var(--success);
-            padding: 12px 16px; border-radius: var(--radius-md); box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
-            display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 600;
-            color: var(--success); animation: slideInUp 0.3s ease; z-index: 9999;
-            white-space: nowrap; max-width: 90%;
-            opacity: 0; pointer-events: none;
-        }
-        .withdrawal-toast.show {
-            opacity: 1;
-            animation: slideInUp 0.3s ease forwards;
-        }
-
         .field-error { display: none; font-size: 12px; color: var(--danger); margin-top: 6px; }
         .field-error.show { display: block; }
 
@@ -479,20 +417,6 @@
             font-size: 13px; line-height: 1.6; background: var(--surface); border-radius: var(--radius-xl);
             border: 1px dashed var(--divider);
         }
-
-        .upload-box {
-            border: 2px dashed var(--divider);
-            border-radius: var(--radius-md);
-            padding: 24px;
-            text-align: center;
-            color: var(--text-secondary);
-            cursor: pointer;
-            margin-bottom: 16px;
-            background: var(--bg);
-            transition: all 0.2s;
-        }
-        .upload-box:active { background: #e2e8f0; }
-        .upload-icon { font-size: 32px; margin-bottom: 8px; color: var(--secondary); display: block;}
     </style>
 </head>
 <body>
@@ -502,10 +426,9 @@
             <button class="icon-btn">🔔</button>
         </div>
 
-        <!-- 1. JOBS PAGE (MARKETPLACE) -->
+        <!-- 1. JOBS PAGE -->
         <div class="page active" id="page-jobs">
             <div class="jobs-layout" id="jobsLayout">
-                
                 <div class="tab-sidebar">
                     <button class="tab-btn" data-tab="member"><span class="tab-icon">👥</span><span class="tab-text">Cari Member</span></button>
                     <button class="tab-btn" data-tab="referral"><span class="tab-icon">📢</span><span class="tab-text">Cari Referral</span></button>
@@ -520,12 +443,25 @@
                     <div id="tasks-other" style="display:none;"></div>
                 </div>
             </div>
-
-            <!-- Toast Pop-up 0.3 Detik -->
             <div id="jobToast" class="job-toast"></div>
         </div>
 
-        <!-- 4. DOMPET PAGE -->
+        <!-- 2. SUBMIT PAGE -->
+        <div class="page" id="page-submit">
+            <div class="page-title">📤 Submit Tugas</div>
+            <div class="page-subtitle">Kirim bukti screenshot tugas yang sudah kamu ambil.</div>
+            <div id="submitActiveList"></div>
+            <div class="empty-state">Belum ada tugas yang diambil.</div>
+        </div>
+
+        <!-- 3. DEPLOY PAGE -->
+        <div class="page" id="page-deploy">
+            <div class="page-title">✍️ Deploy Job Baru</div>
+            <div class="page-subtitle">Pasang iklan tugas mikro kamu di sini.</div>
+            <div class="empty-state">Fitur deploy sedang dipersiapkan.</div>
+        </div>
+
+        <!-- 4. WALLET PAGE -->
         <div class="page" id="page-wallet">
             <div class="balance-card">
                 <div class="balance-label">Saldo Tersedia</div>
@@ -551,13 +487,12 @@
                     <button id="closeWithdrawalModal" style="background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-secondary);">✕</button>
                 </div>
 
-                <!-- Tabs -->
                 <div class="withdrawal-tabs">
                     <button class="withdrawal-tab-btn active" data-withdrawal-tab="xrocket">🚀 xRocket</button>
                     <button class="withdrawal-tab-btn" data-withdrawal-tab="ewallet">💳 E-Wallet</button>
                 </div>
 
-                <!-- xRocket Content -->
+                <!-- xRocket -->
                 <div id="xrocketWithdrawContent" class="withdrawal-content active">
                     <div class="withdrawal-address-help">
                         📍 <strong>TON/USDT Wallet Address</strong><br>
@@ -570,7 +505,6 @@
                             <span>Rp</span>
                             <input type="text" inputmode="numeric" id="xrocketAmountInput" placeholder="Min. Rp 50.000">
                         </div>
-                        <div class="field-error" id="xrocketAmountError" style="margin-top: 6px;">Minimal withdraw Rp 50.000</div>
                         <div class="amount-estimate-box" style="margin-top: 10px;">
                             Estimasi: <strong id="xrocketUsdtEstimate">0 USDT</strong>
                         </div>
@@ -579,13 +513,12 @@
                     <div class="field-group">
                         <label class="field-label" for="xrocketAddressInput">TON/USDT Wallet Address</label>
                         <input type="text" class="textarea-input" id="xrocketAddressInput" style="min-height: 50px;" placeholder="EQ... atau 0x...">
-                        <div class="field-error" id="xrocketAddressError"></div>
                     </div>
 
                     <button class="confirm-btn" id="btnXrocketWithdraw">Withdraw Sekarang</button>
                 </div>
 
-                <!-- E-Wallet Content -->
+                <!-- E-Wallet -->
                 <div id="ewalletWithdrawContent" class="withdrawal-content" style="display: none;">
                     <div class="field-group">
                         <label class="field-label">Pilih Metode E-Wallet</label>
@@ -615,7 +548,6 @@
                             <span>Rp</span>
                             <input type="text" inputmode="numeric" id="ewalletAmountInput" placeholder="Min. Rp 50.000">
                         </div>
-                        <div class="field-error" id="ewalletAmountError" style="margin-top: 6px;">Minimal withdraw Rp 50.000</div>
                         <div class="amount-estimate-box" style="margin-top: 10px;">
                             <div id="ewalletFeeEstimate">Rp 0 + Rp 10.000 (biaya) = <strong>Rp 10.000</strong></div>
                         </div>
@@ -638,13 +570,16 @@
             </div>
         </div>
 
-        <!-- Withdrawal Toast -->
-        <div id="withdrawalToast" class="withdrawal-toast"></div>
-
         <!-- BOTTOM NAVIGATION -->
         <div class="bottom-nav">
             <div class="nav-item active" onclick="switchPage('page-jobs')">
                 <span class="nav-icon">🏠</span> <span>Home</span>
+            </div>
+            <div class="nav-item" onclick="switchPage('page-submit')">
+                <span class="nav-icon">📤</span> <span>Submit</span>
+            </div>
+            <div class="nav-item" onclick="switchPage('page-deploy')">
+                <span class="nav-icon">✍️</span> <span>Deploy</span>
             </div>
             <div class="nav-item" onclick="switchPage('page-wallet')">
                 <span class="nav-icon">💰</span> <span>Dompet</span>
@@ -652,9 +587,7 @@
         </div>
     </div>
 
-    <script src="js/withdrawalManager.js"></script>
     <script>
-        // Main App Scripts
         function switchPage(pageId) {
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             document.getElementById(pageId)?.classList.add('active');
@@ -663,7 +596,6 @@
             event.target.closest('.nav-item')?.classList.add('active');
         }
 
-        // Withdraw button handler
         document.getElementById('withdrawBtn')?.addEventListener('click', () => {
             document.getElementById('withdrawalModal')?.classList.add('active');
         });
@@ -672,7 +604,6 @@
             document.getElementById('withdrawalModal')?.classList.remove('active');
         });
 
-        // Tab switching for withdrawal
         document.querySelectorAll('[data-withdrawal-tab]').forEach(btn => {
             btn.addEventListener('click', () => {
                 const tab = btn.getAttribute('data-withdrawal-tab');
@@ -684,7 +615,6 @@
             });
         });
 
-        // E-wallet method selection
         document.querySelectorAll('[data-ewallet-method]').forEach(btn => {
             btn.addEventListener('click', () => {
                 document.querySelectorAll('[data-ewallet-method]').forEach(b => b.classList.remove('active'));
@@ -692,7 +622,6 @@
             });
         });
 
-        // xRocket amount input formatter
         document.getElementById('xrocketAmountInput')?.addEventListener('input', (e) => {
             const digits = e.target.value.replace(/\D/g, '');
             e.target.value = digits ? Number(digits).toLocaleString('id-ID') : '';
@@ -702,7 +631,6 @@
             document.getElementById('xrocketUsdtEstimate').textContent = amount > 0 ? `${usdt} USDT (~Rp ${amount.toLocaleString('id-ID')})` : '0 USDT';
         });
 
-        // E-wallet amount input formatter
         document.getElementById('ewalletAmountInput')?.addEventListener('input', (e) => {
             const digits = e.target.value.replace(/\D/g, '');
             e.target.value = digits ? Number(digits).toLocaleString('id-ID') : '';
