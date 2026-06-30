@@ -79,12 +79,22 @@ function getInitial(name = "") {
   return (name.trim()[0] || "U").toUpperCase();
 }
 
+function getUserLevel(completedTasks = 0) {
+  const n = Number(completedTasks) || 0;
+  if (n >= 2000) return "Elite";
+  if (n >= 800) return "Platinum";
+  if (n >= 300) return "Gold";
+  if (n >= 100) return "Silver";
+  if (n >= 25) return "Bronze";
+  return "Beginner";
+}
+
 function renderDefaultPage(tabKey) {
   const data = pageCopy[tabKey];
   contentArea.innerHTML = `<h1>${data.title}</h1><p>${data.desc}</p>`;
 }
 
-/* PROFILE */
+/* ================= PROFILE (UI updated as requested) ================= */
 function renderProfilePage() {
   const user = getTelegramUser();
   const saved = getProfileDataByUser(user);
@@ -93,6 +103,25 @@ function renderProfilePage() {
   const shownName = user?.first_name || "Unknown";
   const shownUsername = user?.username || "unknown";
   const shownId = user?.id || "-";
+
+  // Use existing backend/local data if available, fallback if unavailable
+  const tasksCompletedRaw =
+    saved.tasksCompleted ??
+    saved.completedTasks ??
+    saved.task_completed ??
+    saved.totalTasks ??
+    0;
+
+  const totalEarningsRaw =
+    saved.totalEarnings ??
+    saved.earnings ??
+    saved.total_earnings ??
+    saved.income ??
+    0;
+
+  const tasksCompleted = Number(tasksCompletedRaw) || 0;
+  const totalEarnings = Number(totalEarningsRaw) || 0;
+  const level = getUserLevel(tasksCompleted);
 
   contentArea.innerHTML = `
     <div class="profile-wrap">
@@ -103,12 +132,22 @@ function renderProfilePage() {
             <div class="hero-name">${escapeHtml(shownName)}</div>
             <div class="hero-user">@${escapeHtml(shownUsername)}</div>
           </div>
+          <div class="hero-telegram-id" title="Telegram ID">${escapeHtml(String(shownId))}</div>
         </div>
 
         <div class="stat-grid">
-          <div class="stat"><div class="v">${escapeHtml(String(shownId))}</div><div class="k">Telegram ID</div></div>
-          <div class="stat"><div class="v">${saved.ewalletProvider ? "Ready" : "Empty"}</div><div class="k">E-Wallet</div></div>
-          <div class="stat"><div class="v">${saved.walletAddress ? "Ready" : "Empty"}</div><div class="k">Xrocket Address</div></div>
+          <div class="stat">
+            <div class="v">${escapeHtml(level)}</div>
+            <div class="k">Level</div>
+          </div>
+          <div class="stat">
+            <div class="v">${escapeHtml(String(tasksCompleted))}</div>
+            <div class="k">Tasks Completed</div>
+          </div>
+          <div class="stat">
+            <div class="v">${escapeHtml(formatIDR(totalEarnings))}</div>
+            <div class="k">Total Earnings</div>
+          </div>
         </div>
       </section>
 
@@ -155,6 +194,11 @@ function renderProfilePage() {
       walletAddress: document.getElementById("walletAddress").value.trim(),
       ewalletNumber: document.getElementById("ewalletNumber").value.trim(),
       ewalletProvider: document.getElementById("ewalletProvider").value,
+
+      // preserve existing metrics
+      tasksCompleted,
+      totalEarnings,
+
       updatedAt: new Date().toISOString(),
     };
 
@@ -167,7 +211,7 @@ function renderProfilePage() {
   });
 }
 
-/* WALLET SIMPLE: no coin icon, no staking */
+/* ================= WALLET ================= */
 function renderWalletPage() {
   const user = getTelegramUser();
   const saved = getProfileDataByUser(user);
@@ -175,7 +219,6 @@ function renderWalletPage() {
   const ewalletReady = !!(saved.ewalletProvider && saved.ewalletNumber);
   const xrocketReady = !!saved.walletAddress;
 
-  // Dummy local balance for now (nanti sambung backend)
   const balance = Number(localStorage.getItem("walletBalance") || 0);
 
   contentArea.innerHTML = `
@@ -236,7 +279,6 @@ function renderWalletPage() {
     const amount = Number(document.getElementById("amountInput").value || 0);
     if (!amount || amount < 1000) return setWalletHint("Minimal deposit 1000.", true);
 
-    // stub local topup for testing UI
     const newBal = balance + amount;
     localStorage.setItem("walletBalance", String(newBal));
     setWalletHint(`Deposit ${formatIDR(amount)} berhasil (mode test). Refresh tab Wallet untuk update tampilan.`, false);
@@ -300,10 +342,17 @@ function renderProviderOptions(selected = "") {
 }
 
 function formatIDR(n) {
-  return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(n || 0);
+  return new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    maximumFractionDigits: 0
+  }).format(n || 0);
 }
 function formatAmount(n) {
-  return new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n || 0);
+  return new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(n || 0);
 }
 
 function escapeHtml(str) {
