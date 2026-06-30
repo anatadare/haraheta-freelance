@@ -221,8 +221,8 @@ function renderProfilePage() {
     const currentWorkerId = getWorkerId(currentUser);
 
     const payload = {
-      workerId: currentWorkerId,             // public identity
-      telegramId: String(currentUser.id),    // keep for backend anti double-claim
+      workerId: currentWorkerId,
+      telegramId: String(currentUser.id),
       name: currentUser.first_name || "",
       username: currentUser.username || "",
       walletAddress: document.getElementById("walletAddress").value.trim(),
@@ -242,6 +242,39 @@ function renderProfilePage() {
   });
 }
 
+/* LIVE FX: Frankfurter */
+async function getLiveUsdPerIdr() {
+  const cacheKey = "fx:IDRUSD";
+  const cacheRaw = localStorage.getItem(cacheKey);
+  if (cacheRaw) {
+    try {
+      const c = JSON.parse(cacheRaw);
+      const age = Date.now() - (c.ts || 0);
+      if (c.rate && age < 30 * 60 * 1000) return c.rate; // 30 menit
+    } catch {}
+  }
+
+  const res = await fetch("https://api.frankfurter.app/latest?from=IDR&to=USD", { method: "GET" });
+  if (!res.ok) throw new Error("FX fetch failed");
+  const data = await res.json();
+
+  const rate = Number(data?.rates?.USD || 0); // 1 IDR = ? USD
+  if (!rate) throw new Error("Invalid FX rate");
+
+  localStorage.setItem(cacheKey, JSON.stringify({ rate, ts: Date.now() }));
+  return rate;
+}
+
+function formatUSDFromIDR(idrAmount, usdPerIdr) {
+  const usd = (Number(idrAmount) || 0) * (Number(usdPerIdr) || 0);
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(usd);
+}
+
 /* WALLET */
 function renderWalletPage() {
   const user = getTelegramUser();
@@ -256,8 +289,8 @@ function renderWalletPage() {
     <div class="profile-wrap">
       <section class="balance-box">
         <div class="balance-label">TOTAL BALANCE</div>
-        <div class="balance-main">${formatAmount(balance)}</div>
-        <div class="balance-sub">${formatIDR(balance)}</div>
+        <div class="balance-main">${formatIDR(balance)}</div>
+        <div class="balance-sub" id="usdLiveText">Loading live USD...</div>
       </section>
 
       <section class="section-card">
@@ -305,6 +338,26 @@ function renderWalletPage() {
       </section>
     </div>
   `;
+
+  // load live USD
+  (async () => {
+    const usdEl = document.getElementById("usdLiveText");
+    if (!usdEl) return;
+
+    try {
+      const usdPerIdr = await getLiveUsdPerIdr();
+      usdEl.textContent = formatUSDFromIDR(balance, usdPerIdr);
+    } catch {
+      try {
+        const c = JSON.parse(localStorage.getItem("fx:IDRUSD") || "null");
+        if (c?.rate) {
+          usdEl.textContent = `${formatUSDFromIDR(balance, c.rate)} (cached)`;
+          return;
+        }
+      } catch {}
+      usdEl.textContent = "USD unavailable";
+    }
+  })();
 
   document.getElementById("depositBtn")?.addEventListener("click", () => {
     const amount = Number(document.getElementById("amountInput").value || 0);
