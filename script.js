@@ -89,12 +89,36 @@ function getUserLevel(completedTasks = 0) {
   return "Beginner";
 }
 
+/* Worker ID (public identity) */
+function generateWorkerId(telegramId = "") {
+  const seed = String(telegramId || "0");
+  let h = 2166136261;
+  for (let i = 0; i < seed.length; i++) {
+    h ^= seed.charCodeAt(i);
+    h += (h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24);
+  }
+  const base = Math.abs(h >>> 0).toString(36).toUpperCase();
+  const rand = Math.random().toString(36).slice(2, 6).toUpperCase();
+  return `HH-${base.slice(0, 4).padEnd(4, "X")}-${rand}`;
+}
+
+function getWorkerId(user) {
+  const tgId = user?.id ? String(user.id) : "";
+  const key = tgId ? `workerId:${tgId}` : "workerId:last";
+  let wid = localStorage.getItem(key);
+  if (!wid) {
+    wid = generateWorkerId(tgId);
+    localStorage.setItem(key, wid);
+  }
+  return wid;
+}
+
 function renderDefaultPage(tabKey) {
   const data = pageCopy[tabKey];
   contentArea.innerHTML = `<h1>${data.title}</h1><p>${data.desc}</p>`;
 }
 
-/* ================= PROFILE (UI updated as requested) ================= */
+/* ================= PROFILE ================= */
 function renderProfilePage() {
   const user = getTelegramUser();
   const saved = getProfileDataByUser(user);
@@ -102,9 +126,8 @@ function renderProfilePage() {
 
   const shownName = user?.first_name || "Unknown";
   const shownUsername = user?.username || "unknown";
-  const shownId = user?.id || "-";
+  const workerId = getWorkerId(user);
 
-  // Use existing backend/local data if available, fallback if unavailable
   const tasksCompletedRaw =
     saved.tasksCompleted ??
     saved.completedTasks ??
@@ -132,7 +155,7 @@ function renderProfilePage() {
             <div class="hero-name">${escapeHtml(shownName)}</div>
             <div class="hero-user">@${escapeHtml(shownUsername)}</div>
           </div>
-          <div class="hero-telegram-id" title="Telegram ID">${escapeHtml(String(shownId))}</div>
+          <div class="hero-telegram-id" title="Worker ID">${escapeHtml(workerId)}</div>
         </div>
 
         <div class="stat-grid">
@@ -187,18 +210,18 @@ function renderProfilePage() {
     const currentUser = getTelegramUser();
     if (!currentUser?.id) return;
 
+    const currentWorkerId = getWorkerId(currentUser);
+
     const payload = {
-      telegramId: String(currentUser.id),
+      workerId: currentWorkerId,             // public identity
+      telegramId: String(currentUser.id),    // keep for backend anti double-claim
       name: currentUser.first_name || "",
       username: currentUser.username || "",
       walletAddress: document.getElementById("walletAddress").value.trim(),
       ewalletNumber: document.getElementById("ewalletNumber").value.trim(),
       ewalletProvider: document.getElementById("ewalletProvider").value,
-
-      // preserve existing metrics
       tasksCompleted,
       totalEarnings,
-
       updatedAt: new Date().toISOString(),
     };
 
