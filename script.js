@@ -9,16 +9,13 @@ const pageCopy = {
   profile: { title: "Profile", desc: "Lengkapi data payout akun." },
 };
 
-const fallbackUser = {
-  id: "123456789",
-  first_name: "Anata",
-  username: "anatadare",
-};
-
-function getTelegramUser() {
+function getTelegramUserStrict() {
   const tg = window.Telegram?.WebApp;
   const u = tg?.initDataUnsafe?.user;
-  if (!u) return fallbackUser;
+
+  // Wajib data asli Telegram
+  if (!tg || !u || !u.id) return null;
+
   return {
     id: String(u.id || ""),
     first_name: u.first_name || "",
@@ -36,8 +33,26 @@ function getInitial(name = "") {
 }
 
 function renderProfilePage() {
-  const user = getTelegramUser();
-  const saved = JSON.parse(localStorage.getItem("profileData") || "{}");
+  const user = getTelegramUserStrict();
+
+  // Kalau bukan dibuka dari Telegram Mini App, tampilkan warning
+  if (!user) {
+    contentArea.innerHTML = `
+      <div class="section-card">
+        <div class="section-head">
+          <div>
+            <div class="section-title">Telegram Data Not Found</div>
+            <div class="section-sub">Buka app ini dari Telegram Mini App untuk memuat data asli user.</div>
+          </div>
+        </div>
+        <p class="hint">Status: fallback dimatikan. Tidak pakai data dummy.</p>
+      </div>
+    `;
+    return;
+  }
+
+  const storageKey = `profileData:${user.id}`;
+  const saved = JSON.parse(localStorage.getItem(storageKey) || "{}");
 
   contentArea.innerHTML = `
     <div class="profile-wrap">
@@ -101,7 +116,6 @@ function renderProfilePage() {
   `;
 
   document.getElementById("saveProfileBtn").addEventListener("click", async () => {
-    // tetap ambil data unik telegram, tapi tidak ditampilkan sebagai form
     const payload = {
       telegramId: String(user.id || ""),
       name: user.first_name || "",
@@ -112,13 +126,14 @@ function renderProfilePage() {
       updatedAt: new Date().toISOString(),
     };
 
-    localStorage.setItem("profileData", JSON.stringify(payload));
+    // Simpan per-user (berdasarkan telegramId asli)
+    localStorage.setItem(storageKey, JSON.stringify(payload));
 
-    // Aktifkan jika backend siap
+    // Aktifkan kalau endpoint backend kamu sudah jadi:
     // await saveProfileToDatabase(payload);
 
     const hint = document.getElementById("saveHint");
-    hint.textContent = "Profile tersimpan ✅";
+    hint.textContent = "Profile tersimpan ✅ (Telegram data aktif)";
     hint.classList.add("ok");
   });
 }
