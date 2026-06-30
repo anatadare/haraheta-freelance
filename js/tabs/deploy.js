@@ -8,7 +8,7 @@ window.renderDeployTab = function (contentArea) {
         </div>
       </div>
 
-      <div class="deploy-grid">
+      <div class="deploy-grid" id="deployGrid">
         <button class="deploy-card" data-deploy-cat="member">
           <div class="deploy-icon">👑</div>
           <div class="deploy-name">Beli Member</div>
@@ -39,7 +39,7 @@ window.renderDeployTab = function (contentArea) {
       <div class="section-head">
         <div>
           <div class="section-title">Draft Deploy</div>
-          <div class="section-sub">Form awal, nanti bisa kamu revisi detailnya.</div>
+          <div class="section-sub">Isi detail awal job, nanti bisa kamu revisi lagi.</div>
         </div>
       </div>
 
@@ -79,6 +79,7 @@ window.renderDeployTab = function (contentArea) {
   const cards = contentArea.querySelectorAll(".deploy-card");
   const categoryInput = contentArea.querySelector("#deployCategory");
   const hint = contentArea.querySelector("#deployHint");
+  const grid = contentArea.querySelector("#deployGrid");
 
   let selectedCategory = "";
 
@@ -89,18 +90,29 @@ window.renderDeployTab = function (contentArea) {
     game: "Akun / Item Game",
   };
 
-  cards.forEach((card) => {
-    card.addEventListener("click", () => {
-      cards.forEach((c) => c.classList.remove("active"));
-      card.classList.add("active");
+  function selectCategory(card) {
+    cards.forEach((c) => c.classList.remove("active"));
+    card.classList.add("active");
 
-      const key = card.dataset.deployCat;
-      selectedCategory = key;
-      categoryInput.value = categoryMap[key] || "-";
-      hint.textContent = `Kategori dipilih: ${categoryInput.value}`;
-      hint.classList.add("ok");
-    });
+    const key = card.dataset.deployCat;
+    selectedCategory = key;
+    categoryInput.value = categoryMap[key] || "-";
+    hint.textContent = `Kategori dipilih: ${categoryInput.value}`;
+    hint.classList.add("ok");
+
+    // biar card kepilih kelihatan jelas di area scroll
+    card.scrollIntoView({ behavior: "smooth", inline: "start", block: "nearest" });
+  }
+
+  cards.forEach((card) => {
+    card.addEventListener("click", () => selectCategory(card));
   });
+
+  // default pilih card pertama
+  if (cards.length > 0) {
+    selectCategory(cards[0]);
+    grid.scrollLeft = 0;
+  }
 
   contentArea.querySelector("#deployCreateBtn")?.addEventListener("click", () => {
     const title = contentArea.querySelector("#deployTitle").value.trim();
