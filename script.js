@@ -6,7 +6,7 @@ const pageCopy = {
   submit: { title: "Submit", desc: "Halaman Submit aktif." },
   deploy: { title: "Deploy", desc: "Halaman Deploy aktif." },
   wallet: { title: "Wallet", desc: "Halaman Wallet aktif." },
-  profile: { title: "Profile", desc: "Lengkapi data verifikasi akun." },
+  profile: { title: "Profile", desc: "Lengkapi data payout akun." },
 };
 
 const fallbackUser = {
@@ -48,7 +48,6 @@ function renderProfilePage() {
             <div class="hero-name">${escapeHtml(user.first_name || "User")}</div>
             <div class="hero-user">@${escapeHtml(user.username || "no_username")}</div>
           </div>
-          <div class="verify-badge">Verified ID</div>
         </div>
 
         <div class="stat-grid">
@@ -70,35 +69,8 @@ function renderProfilePage() {
       <section class="section-card">
         <div class="section-head">
           <div>
-            <div class="section-title">Identity Verification</div>
-            <div class="section-sub">Dipakai untuk validasi akun & anti double claim.</div>
-          </div>
-        </div>
-
-        <div class="form-grid">
-          <div class="inline-2">
-            <div class="row">
-              <label>Nama</label>
-              <input class="input" readonly value="${escapeHtml(user.first_name || "-")}" />
-            </div>
-            <div class="row">
-              <label>Username</label>
-              <input class="input" readonly value="@${escapeHtml(user.username || "tidak_ada_username")}" />
-            </div>
-          </div>
-
-          <div class="row">
-            <label>Telegram ID</label>
-            <input class="input" readonly value="${escapeHtml(user.id || "-")}" />
-          </div>
-        </div>
-      </section>
-
-      <section class="section-card">
-        <div class="section-head">
-          <div>
             <div class="section-title">Payout Settings</div>
-            <div class="section-sub">Simpan data pembayaran untuk proses reward.</div>
+            <div class="section-sub">Atur metode pembayaran reward kamu.</div>
           </div>
         </div>
 
@@ -129,6 +101,7 @@ function renderProfilePage() {
   `;
 
   document.getElementById("saveProfileBtn").addEventListener("click", async () => {
+    // tetap ambil data unik telegram, tapi tidak ditampilkan sebagai form
     const payload = {
       telegramId: String(user.id || ""),
       name: user.first_name || "",
@@ -141,7 +114,7 @@ function renderProfilePage() {
 
     localStorage.setItem("profileData", JSON.stringify(payload));
 
-    // Aktifkan ini kalau endpoint backend sudah siap:
+    // Aktifkan jika backend siap
     // await saveProfileToDatabase(payload);
 
     const hint = document.getElementById("saveHint");
@@ -151,14 +124,12 @@ function renderProfilePage() {
 }
 
 function renderProviderOptions(selected = "") {
-  // USDT TRC20 / BEP20 dihapus sesuai request
   const providers = ["DANA", "OVO", "GoPay", "ShopeePay", "LinkAja", "SeaBank", "Bank Transfer"];
   return providers
     .map((p) => `<option value="${p}" ${selected === p ? "selected" : ""}>${p}</option>`)
     .join("");
 }
 
-// Endpoint backend (siapkan nanti)
 async function saveProfileToDatabase(payload) {
   const endpoint = "https://your-api.com/profile/upsert";
   const res = await fetch(endpoint, {
