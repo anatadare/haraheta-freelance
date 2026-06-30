@@ -117,6 +117,7 @@ function renderDefaultPage(tabKey) {
   contentArea.innerHTML = `<h1>${data.title}</h1><p>${data.desc}</p>`;
 }
 
+/* DEPLOY bridge (tetap dukung js/tabs/deploy.js) */
 function renderDeployPage() {
   if (typeof window.renderDeployTab === "function") {
     return window.renderDeployTab(contentArea);
@@ -124,6 +125,7 @@ function renderDeployPage() {
   return renderDefaultPage("deploy");
 }
 
+/* PROFILE */
 function renderProfilePage() {
   const user = getTelegramUser();
   const saved = getProfileDataByUser(user);
@@ -133,8 +135,19 @@ function renderProfilePage() {
   const shownUsername = user?.username || "unknown";
   const workerId = getWorkerId(user);
 
-  const tasksCompletedRaw = saved.tasksCompleted ?? saved.completedTasks ?? saved.task_completed ?? saved.totalTasks ?? 0;
-  const totalEarningsRaw = saved.totalEarnings ?? saved.earnings ?? saved.total_earnings ?? saved.income ?? 0;
+  const tasksCompletedRaw =
+    saved.tasksCompleted ??
+    saved.completedTasks ??
+    saved.task_completed ??
+    saved.totalTasks ??
+    0;
+
+  const totalEarningsRaw =
+    saved.totalEarnings ??
+    saved.earnings ??
+    saved.total_earnings ??
+    saved.income ??
+    0;
 
   const tasksCompleted = Number(tasksCompletedRaw) || 0;
   const totalEarnings = Number(totalEarningsRaw) || 0;
@@ -228,12 +241,12 @@ function renderProfilePage() {
   });
 }
 
-/* API-only FX (Frankfurter) */
+/* WALLET FX via your own backend /api/fx */
 const FX_CACHE_KEY = "fx:IDRUSD";
-const FX_CACHE_TTL_MS = 30 * 60 * 1000;
+const FX_CACHE_TTL_MS = 30 * 60 * 1000; // 30 menit
 
 async function getLiveUsdPerIdr() {
-  // pakai cache dulu
+  // 1) cache dulu
   const raw = localStorage.getItem(FX_CACHE_KEY);
   if (raw) {
     try {
@@ -243,16 +256,13 @@ async function getLiveUsdPerIdr() {
     } catch {}
   }
 
-  // hit API Frankfurter
-  const res = await fetch("https://api.frankfurter.app/latest?base=IDR&symbols=USD", {
-    method: "GET",
-    cache: "no-store",
-  });
+  // 2) hit endpoint internal
+  const res = await fetch("/api/fx", { method: "GET", cache: "no-store" });
   if (!res.ok) throw new Error("FX fetch failed");
 
-  const data = await res.json();
-  const rate = Number(data?.rates?.USD || 0); // 1 IDR = ? USD
-  if (!rate) throw new Error("Invalid FX rate");
+  const json = await res.json();
+  const rate = Number(json?.rate || 0);
+  if (!json?.ok || !rate) throw new Error("Invalid FX payload");
 
   localStorage.setItem(FX_CACHE_KEY, JSON.stringify({ rate, ts: Date.now() }));
   return rate;
@@ -443,4 +453,5 @@ tabs.forEach((tab) => {
   });
 });
 
+// default buka Deploy (sesuai flow kamu sekarang)
 renderDeployPage();
