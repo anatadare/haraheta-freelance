@@ -89,7 +89,6 @@ function getUserLevel(completedTasks = 0) {
   return "Beginner";
 }
 
-/* Worker ID (public identity) */
 function generateWorkerId(telegramId = "") {
   const seed = String(telegramId || "0");
   let h = 2166136261;
@@ -118,7 +117,6 @@ function renderDefaultPage(tabKey) {
   contentArea.innerHTML = `<h1>${data.title}</h1><p>${data.desc}</p>`;
 }
 
-/* DEPLOY bridge (external file support) */
 function renderDeployPage() {
   if (typeof window.renderDeployTab === "function") {
     return window.renderDeployTab(contentArea);
@@ -126,7 +124,6 @@ function renderDeployPage() {
   return renderDefaultPage("deploy");
 }
 
-/* PROFILE */
 function renderProfilePage() {
   const user = getTelegramUser();
   const saved = getProfileDataByUser(user);
@@ -136,19 +133,8 @@ function renderProfilePage() {
   const shownUsername = user?.username || "unknown";
   const workerId = getWorkerId(user);
 
-  const tasksCompletedRaw =
-    saved.tasksCompleted ??
-    saved.completedTasks ??
-    saved.task_completed ??
-    saved.totalTasks ??
-    0;
-
-  const totalEarningsRaw =
-    saved.totalEarnings ??
-    saved.earnings ??
-    saved.total_earnings ??
-    saved.income ??
-    0;
+  const tasksCompletedRaw = saved.tasksCompleted ?? saved.completedTasks ?? saved.task_completed ?? saved.totalTasks ?? 0;
+  const totalEarningsRaw = saved.totalEarnings ?? saved.earnings ?? saved.total_earnings ?? saved.income ?? 0;
 
   const tasksCompleted = Number(tasksCompletedRaw) || 0;
   const totalEarnings = Number(totalEarningsRaw) || 0;
@@ -242,7 +228,25 @@ function renderProfilePage() {
   });
 }
 
-/* LIVE FX: Frankfurter */
+/* FX helpers */
+async function fetchFrankfurterRate() {
+  const res = await fetch("https://api.frankfurter.app/latest?base=IDR&symbols=USD", { method: "GET" });
+  if (!res.ok) throw new Error("Frankfurter fetch failed");
+  const data = await res.json();
+  const rate = Number(data?.rates?.USD || 0);
+  if (!rate) throw new Error("Frankfurter invalid rate");
+  return rate;
+}
+
+async function fetchExchangeHostRate() {
+  const res = await fetch("https://api.exchangerate.host/convert?from=IDR&to=USD&amount=1", { method: "GET" });
+  if (!res.ok) throw new Error("ExchangeHost fetch failed");
+  const data = await res.json();
+  const rate = Number(data?.result || 0);
+  if (!rate) throw new Error("ExchangeHost invalid rate");
+  return rate;
+}
+
 async function getLiveUsdPerIdr() {
   const cacheKey = "fx:IDRUSD";
   const cacheRaw = localStorage.getItem(cacheKey);
@@ -250,16 +254,16 @@ async function getLiveUsdPerIdr() {
     try {
       const c = JSON.parse(cacheRaw);
       const age = Date.now() - (c.ts || 0);
-      if (c.rate && age < 30 * 60 * 1000) return c.rate; // 30 menit
+      if (c.rate && age < 30 * 60 * 1000) return c.rate; // 30 min cache
     } catch {}
   }
 
-  const res = await fetch("https://api.frankfurter.app/latest?from=IDR&to=USD", { method: "GET" });
-  if (!res.ok) throw new Error("FX fetch failed");
-  const data = await res.json();
-
-  const rate = Number(data?.rates?.USD || 0); // 1 IDR = ? USD
-  if (!rate) throw new Error("Invalid FX rate");
+  let rate = 0;
+  try {
+    rate = await fetchFrankfurterRate();
+  } catch {
+    rate = await fetchExchangeHostRate(); // fallback
+  }
 
   localStorage.setItem(cacheKey, JSON.stringify({ rate, ts: Date.now() }));
   return rate;
@@ -275,7 +279,6 @@ function formatUSDFromIDR(idrAmount, usdPerIdr) {
   }).format(usd);
 }
 
-/* WALLET */
 function renderWalletPage() {
   const user = getTelegramUser();
   const saved = getProfileDataByUser(user);
@@ -339,7 +342,6 @@ function renderWalletPage() {
     </div>
   `;
 
-  // load live USD
   (async () => {
     const usdEl = document.getElementById("usdLiveText");
     if (!usdEl) return;
@@ -430,13 +432,6 @@ function formatIDR(n) {
     style: "currency",
     currency: "IDR",
     maximumFractionDigits: 0
-  }).format(n || 0);
-}
-
-function formatAmount(n) {
-  return new Intl.NumberFormat("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
   }).format(n || 0);
 }
 
