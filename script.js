@@ -114,11 +114,19 @@ function getWorkerId(user) {
 }
 
 function renderDefaultPage(tabKey) {
-  const data = pageCopy[tabKey];
+  const data = pageCopy[tabKey] || { title: "Page", desc: "Halaman aktif." };
   contentArea.innerHTML = `<h1>${data.title}</h1><p>${data.desc}</p>`;
 }
 
-/* ================= PROFILE ================= */
+/* DEPLOY bridge (external file support) */
+function renderDeployPage() {
+  if (typeof window.renderDeployTab === "function") {
+    return window.renderDeployTab(contentArea);
+  }
+  return renderDefaultPage("deploy");
+}
+
+/* PROFILE */
 function renderProfilePage() {
   const user = getTelegramUser();
   const saved = getProfileDataByUser(user);
@@ -234,7 +242,7 @@ function renderProfilePage() {
   });
 }
 
-/* ================= WALLET ================= */
+/* WALLET */
 function renderWalletPage() {
   const user = getTelegramUser();
   const saved = getProfileDataByUser(user);
@@ -371,6 +379,7 @@ function formatIDR(n) {
     maximumFractionDigits: 0
   }).format(n || 0);
 }
+
 function formatAmount(n) {
   return new Intl.NumberFormat("en-US", {
     minimumFractionDigits: 2,
@@ -399,8 +408,9 @@ tabs.forEach((tab) => {
     const key = tab.dataset.tab;
     if (key === "profile") return renderProfilePage();
     if (key === "wallet") return renderWalletPage();
+    if (key === "deploy") return renderDeployPage();
     return renderDefaultPage(key);
   });
 });
 
-renderDefaultPage("deploy");
+renderDeployPage();
