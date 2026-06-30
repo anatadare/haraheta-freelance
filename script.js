@@ -5,7 +5,7 @@ const pageCopy = {
   job: { title: "Job", desc: "Halaman Job aktif." },
   submit: { title: "Submit", desc: "Halaman Submit aktif." },
   deploy: { title: "Deploy", desc: "Halaman Deploy aktif." },
-  wallet: { title: "Wallet", desc: "Kelola deposit & withdrawal." },
+  wallet: { title: "Wallet", desc: "Kelola deposit & withdraw." },
   profile: { title: "Profile", desc: "Lengkapi data payout akun." },
 };
 
@@ -26,11 +26,7 @@ function parseUserFromQueryString(qs = "") {
   try {
     const u = JSON.parse(raw);
     if (!u?.id) return null;
-    return {
-      id: String(u.id),
-      first_name: u.first_name || "",
-      username: u.username || "",
-    };
+    return { id: String(u.id), first_name: u.first_name || "", username: u.username || "" };
   } catch {
     return null;
   }
@@ -39,7 +35,6 @@ function parseUserFromQueryString(qs = "") {
 function extractTgWebAppDataFromUrl() {
   const candidates = [];
   candidates.push(window.location.search?.replace(/^\?/, "") || "");
-
   const hash = window.location.hash || "";
   if (hash.startsWith("#")) {
     candidates.push(hash.slice(1));
@@ -52,11 +47,7 @@ function extractTgWebAppDataFromUrl() {
     const p = new URLSearchParams(c);
     const tgWebAppData = p.get("tgWebAppData");
     if (tgWebAppData) {
-      try {
-        return decodeURIComponent(tgWebAppData);
-      } catch {
-        return tgWebAppData;
-      }
+      try { return decodeURIComponent(tgWebAppData); } catch { return tgWebAppData; }
     }
   }
   return "";
@@ -65,13 +56,7 @@ function extractTgWebAppDataFromUrl() {
 function getTelegramUser() {
   const tg = window.Telegram?.WebApp;
   const u1 = tg?.initDataUnsafe?.user;
-  if (u1?.id) {
-    return {
-      id: String(u1.id),
-      first_name: u1.first_name || "",
-      username: u1.username || "",
-    };
-  }
+  if (u1?.id) return { id: String(u1.id), first_name: u1.first_name || "", username: u1.username || "" };
 
   const u2 = parseUserFromQueryString(tg?.initData || "");
   if (u2?.id) return u2;
@@ -90,16 +75,16 @@ function getProfileDataByUser(user) {
   );
 }
 
+function getInitial(name = "") {
+  return (name.trim()[0] || "U").toUpperCase();
+}
+
 function renderDefaultPage(tabKey) {
   const data = pageCopy[tabKey];
   contentArea.innerHTML = `<h1>${data.title}</h1><p>${data.desc}</p>`;
 }
 
-function getInitial(name = "") {
-  return (name.trim()[0] || "U").toUpperCase();
-}
-
-/* ================= PROFILE ================= */
+/* PROFILE */
 function renderProfilePage() {
   const user = getTelegramUser();
   const saved = getProfileDataByUser(user);
@@ -121,18 +106,9 @@ function renderProfilePage() {
         </div>
 
         <div class="stat-grid">
-          <div class="stat">
-            <div class="v">${escapeHtml(String(shownId))}</div>
-            <div class="k">Telegram ID</div>
-          </div>
-          <div class="stat">
-            <div class="v">${saved.ewalletProvider ? "Ready" : "Empty"}</div>
-            <div class="k">E-Wallet</div>
-          </div>
-          <div class="stat">
-            <div class="v">${saved.walletAddress ? "Ready" : "Empty"}</div>
-            <div class="k">Xrocket Address</div>
-          </div>
+          <div class="stat"><div class="v">${escapeHtml(String(shownId))}</div><div class="k">Telegram ID</div></div>
+          <div class="stat"><div class="v">${saved.ewalletProvider ? "Ready" : "Empty"}</div><div class="k">E-Wallet</div></div>
+          <div class="stat"><div class="v">${saved.walletAddress ? "Ready" : "Empty"}</div><div class="k">Xrocket Address</div></div>
         </div>
       </section>
 
@@ -140,7 +116,7 @@ function renderProfilePage() {
         <div class="section-head">
           <div>
             <div class="section-title">Payout Settings</div>
-            <div class="section-sub">Atur metode pembayaran reward kamu.</div>
+            <div class="section-sub">Data ini dipakai di tab Wallet.</div>
           </div>
         </div>
 
@@ -157,22 +133,18 @@ function renderProfilePage() {
             </div>
             <div class="row">
               <label>Provider E-Wallet</label>
-              <select class="select" id="ewalletProvider">
-                ${renderProviderOptions(saved.ewalletProvider)}
-              </select>
+              <select class="select" id="ewalletProvider">${renderProviderOptions(saved.ewalletProvider)}</select>
             </div>
           </div>
 
-          <button class="btn" id="saveProfileBtn" ${canSave ? "" : "disabled"}>
-            ${canSave ? "Save Profile" : "Waiting Telegram Data..."}
-          </button>
+          <button class="btn" id="saveProfileBtn" ${canSave ? "" : "disabled"}>${canSave ? "Save Profile" : "Waiting Telegram Data..."}</button>
           <p class="hint" id="saveHint">${canSave ? "Siap disimpan." : "Data Telegram belum terdeteksi."}</p>
         </div>
       </section>
     </div>
   `;
 
-  document.getElementById("saveProfileBtn")?.addEventListener("click", async () => {
+  document.getElementById("saveProfileBtn")?.addEventListener("click", () => {
     const currentUser = getTelegramUser();
     if (!currentUser?.id) return;
 
@@ -195,70 +167,37 @@ function renderProfilePage() {
   });
 }
 
-/* ================= WALLET ================= */
+/* WALLET SIMPLE: no coin icon, no staking */
 function renderWalletPage() {
   const user = getTelegramUser();
   const saved = getProfileDataByUser(user);
 
-  const name = user?.first_name || "Unknown";
-  const username = user?.username || "unknown";
-  const telegramId = user?.id || "-";
-
   const ewalletReady = !!(saved.ewalletProvider && saved.ewalletNumber);
   const xrocketReady = !!saved.walletAddress;
 
+  // Dummy local balance for now (nanti sambung backend)
+  const balance = Number(localStorage.getItem("walletBalance") || 0);
+
   contentArea.innerHTML = `
     <div class="profile-wrap">
-      <section class="profile-hero">
-        <div class="hero-top">
-          <div class="avatar">${getInitial(name)}</div>
-          <div>
-            <div class="hero-name">Wallet</div>
-            <div class="hero-user">@${escapeHtml(username)}</div>
-          </div>
-        </div>
+      <section class="balance-box">
+        <div class="balance-label">TOTAL BALANCE</div>
+        <div class="balance-main">${formatAmount(balance)}</div>
+        <div class="balance-sub">${formatIDR(balance)}</div>
+      </section>
 
-        <div class="stat-grid">
-          <div class="stat">
-            <div class="v">${ewalletReady ? "Ready" : "Empty"}</div>
-            <div class="k">E-Wallet</div>
-          </div>
-          <div class="stat">
-            <div class="v">${xrocketReady ? "Ready" : "Empty"}</div>
-            <div class="k">Xrocket</div>
-          </div>
-          <div class="stat">
-            <div class="v">${escapeHtml(String(telegramId))}</div>
-            <div class="k">Telegram ID</div>
-          </div>
+      <section class="section-card">
+        <div class="action-grid">
+          <button class="action-btn" id="depositBtn">↓ Deposit</button>
+          <button class="action-btn" id="withdrawBtn">↑ Withdraw</button>
         </div>
       </section>
 
       <section class="section-card">
         <div class="section-head">
           <div>
-            <div class="section-title">Metode Tersimpan</div>
-            <div class="section-sub">Data diambil otomatis dari tab Profile.</div>
-          </div>
-        </div>
-
-        <div class="form-grid">
-          <div class="row">
-            <label>E-Wallet</label>
-            <input class="input" readonly value="${escapeHtml(saved.ewalletProvider || "-")} • ${escapeHtml(saved.ewalletNumber || "-")}" />
-          </div>
-          <div class="row">
-            <label>Xrocket Address</label>
-            <input class="input" readonly value="${escapeHtml(saved.walletAddress || "-")}" />
-          </div>
-        </div>
-      </section>
-
-      <section class="section-card">
-        <div class="section-head">
-          <div>
-            <div class="section-title">Actions</div>
-            <div class="section-sub">Deposit / Withdraw sesuai metode pilihan.</div>
+            <div class="section-title">Withdraw Settings</div>
+            <div class="section-sub">Data otomatis dari Profile.</div>
           </div>
         </div>
 
@@ -269,7 +208,7 @@ function renderWalletPage() {
               <input class="input" id="amountInput" type="number" min="1000" step="1000" placeholder="Contoh: 10000" />
             </div>
             <div class="row">
-              <label>Metode Withdraw</label>
+              <label>Metode</label>
               <select class="select" id="withdrawMethod">
                 <option value="ewallet">E-Wallet (bayar.gg)</option>
                 <option value="xrocket">Xrocket Address</option>
@@ -277,35 +216,43 @@ function renderWalletPage() {
             </div>
           </div>
 
-          <button class="btn" id="depositBtn">Deposit</button>
-          <button class="btn" id="withdrawBtn">Withdraw</button>
-          <p class="hint" id="walletHint">Pilih nominal lalu klik aksi.</p>
+          <div class="row">
+            <label>E-Wallet</label>
+            <input class="input" readonly value="${escapeHtml(saved.ewalletProvider || "-")} • ${escapeHtml(saved.ewalletNumber || "-")}" />
+          </div>
+
+          <div class="row">
+            <label>Xrocket Address</label>
+            <input class="input" readonly value="${escapeHtml(saved.walletAddress || "-")}" />
+          </div>
+
+          <p class="hint" id="walletHint">Pilih nominal lalu klik Deposit / Withdraw.</p>
         </div>
       </section>
     </div>
   `;
 
-  document.getElementById("depositBtn")?.addEventListener("click", async () => {
+  document.getElementById("depositBtn")?.addEventListener("click", () => {
     const amount = Number(document.getElementById("amountInput").value || 0);
     if (!amount || amount < 1000) return setWalletHint("Minimal deposit 1000.", true);
 
-    // TODO backend: create deposit invoice
-    // const url = await createDepositInvoice({ telegramId: user?.id, amount });
-    // window.open(url, "_blank");
-
-    setWalletHint(`Deposit request ${formatIDR(amount)} dibuat (stub). Hubungkan ke invoice backend.`, false);
+    // stub local topup for testing UI
+    const newBal = balance + amount;
+    localStorage.setItem("walletBalance", String(newBal));
+    setWalletHint(`Deposit ${formatIDR(amount)} berhasil (mode test). Refresh tab Wallet untuk update tampilan.`, false);
   });
 
-  document.getElementById("withdrawBtn")?.addEventListener("click", async () => {
+  document.getElementById("withdrawBtn")?.addEventListener("click", () => {
     const amount = Number(document.getElementById("amountInput").value || 0);
     const method = document.getElementById("withdrawMethod").value;
+    const currentBal = Number(localStorage.getItem("walletBalance") || 0);
 
     if (!amount || amount < 1000) return setWalletHint("Minimal withdraw 1000.", true);
+    if (amount > currentBal) return setWalletHint("Saldo tidak cukup.", true);
 
     if (method === "ewallet") {
       if (!ewalletReady) return setWalletHint("E-Wallet belum lengkap di Profile.", true);
 
-      // Generate bayar.gg payment link (template)
       const link = generateBayarGGLink({
         amount,
         provider: saved.ewalletProvider,
@@ -314,7 +261,8 @@ function renderWalletPage() {
         username: user?.username || "",
       });
 
-      setWalletHint("Link bayar.gg berhasil dibuat. Membuka halaman pembayaran...", false);
+      localStorage.setItem("walletBalance", String(currentBal - amount));
+      setWalletHint("Link bayar.gg dibuat. Membuka halaman...", false);
       window.open(link, "_blank");
       return;
     }
@@ -322,8 +270,8 @@ function renderWalletPage() {
     if (method === "xrocket") {
       if (!xrocketReady) return setWalletHint("Xrocket address belum diisi di Profile.", true);
 
-      // TODO backend: process on-chain withdraw request
-      setWalletHint(`Withdraw ke Xrocket address queued (stub): ${saved.walletAddress}`, false);
+      localStorage.setItem("walletBalance", String(currentBal - amount));
+      setWalletHint(`Withdraw ke Xrocket diproses (test): ${saved.walletAddress}`, false);
     }
   });
 
@@ -334,30 +282,28 @@ function renderWalletPage() {
   }
 }
 
-/**
- * Template link generator bayar.gg
- * NOTE: Sesuaikan format URL dengan endpoint bayar.gg yang kamu pakai.
- */
 function generateBayarGGLink({ amount, provider, ewalletNumber, telegramId, username }) {
   const base = "https://bayar.gg/pay";
   const params = new URLSearchParams({
     amount: String(amount),
-    channel: provider,          // contoh: DANA/OVO/GoPay
-    target: ewalletNumber,      // nomor e-wallet user
+    channel: provider,
+    target: ewalletNumber,
     ref_id: `wd_${telegramId}_${Date.now()}`,
     note: `Withdraw @${username || "user"} (${telegramId})`,
   });
   return `${base}?${params.toString()}`;
 }
 
-/* ================= UTILS ================= */
 function renderProviderOptions(selected = "") {
   const providers = ["DANA", "OVO", "GoPay", "ShopeePay", "LinkAja", "SeaBank", "Bank Transfer"];
   return providers.map((p) => `<option value="${p}" ${selected === p ? "selected" : ""}>${p}</option>`).join("");
 }
 
 function formatIDR(n) {
-  return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(n);
+  return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(n || 0);
+}
+function formatAmount(n) {
+  return new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n || 0);
 }
 
 function escapeHtml(str) {
@@ -369,7 +315,6 @@ function escapeHtml(str) {
     .replaceAll("'", "&#039;");
 }
 
-/* ================= TAB NAV ================= */
 tabs.forEach((tab) => {
   tab.addEventListener("click", () => {
     tabs.forEach((t) => {
