@@ -18,29 +18,63 @@ const pageCopy = {
   }
 })();
 
-function parseInitDataRaw(initData = "") {
-  // parse query-string style "user=%7B...%7D&..."
-  const params = new URLSearchParams(initData);
-  const userRaw = params.get("user");
-  if (!userRaw) return null;
+/** Parse user dari string query (tgWebAppData / initData) */
+function parseUserFromQueryString(qs = "") {
+  if (!qs) return null;
+  const params = new URLSearchParams(qs);
+  const raw = params.get("user");
+  if (!raw) return null;
   try {
-    const u = JSON.parse(userRaw);
+    const u = JSON.parse(raw);
+    if (!u?.id) return null;
     return {
-      id: u?.id ? String(u.id) : "",
-      first_name: u?.first_name || "",
-      username: u?.username || "",
+      id: String(u.id),
+      first_name: u.first_name || "",
+      username: u.username || "",
     };
   } catch {
     return null;
   }
 }
 
+/** Ambil tgWebAppData dari URL (web.telegram.org sering taruh di hash/query) */
+function extractTgWebAppDataFromUrl() {
+  const candidates = [];
+
+  // 1) query normal
+  candidates.push(window.location.search?.replace(/^\?/, "") || "");
+
+  // 2) hash part (web.telegram sering simpan di sini)
+  const hash = window.location.hash || "";
+  if (hash.startsWith("#")) {
+    candidates.push(hash.slice(1)); // raw hash
+    // kalau ada "?..." di hash
+    const qIndex = hash.indexOf("?");
+    if (qIndex >= 0) candidates.push(hash.slice(qIndex + 1));
+  }
+
+  // scan candidate: cari tgWebAppData=...
+  for (const c of candidates) {
+    if (!c) continue;
+    const p = new URLSearchParams(c);
+    const tgWebAppData = p.get("tgWebAppData");
+    if (tgWebAppData) {
+      // tgWebAppData itself is encoded query-string
+      try {
+        return decodeURIComponent(tgWebAppData);
+      } catch {
+        return tgWebAppData;
+      }
+    }
+  }
+  return "";
+}
+
 function getTelegramUser() {
   const tg = window.Telegram?.WebApp;
-  if (!tg) return null;
 
-  // 1) paling umum
-  const u1 = tg.initDataUnsafe?.user;
+  // A) direct from SDK
+  const u1 = tg?.initDataUnsafe?.user;
   if (u1?.id) {
     return {
       id: String(u1.id),
@@ -49,19 +83,14 @@ function getTelegramUser() {
     };
   }
 
-  // 2) parse dari initData raw
-  const u2 = parseInitDataRaw(tg.initData || "");
+  // B) parse from initData raw
+  const u2 = parseUserFromQueryString(tg?.initData || "");
   if (u2?.id) return u2;
 
-  // 3) kadang ada di unsafe object lain (defensive)
-  const maybeUser = tg?.unsafeData?.user || tg?.WebAppUser;
-  if (maybeUser?.id) {
-    return {
-      id: String(maybeUser.id),
-      first_name: maybeUser.first_name || "",
-      username: maybeUser.username || "",
-    };
-  }
+  // C) parse from URL tgWebAppData (important for web.telegram.org)
+  const rawFromUrl = extractTgWebAppDataFromUrl();
+  const u3 = parseUserFromQueryString(rawFromUrl);
+  if (u3?.id) return u3;
 
   return null;
 }
@@ -78,13 +107,11 @@ function getInitial(name = "") {
 function renderProfilePage() {
   const user = getTelegramUser();
   const saved = JSON.parse(localStorage.getItem("profileData:last") || "{}");
-
-  // tetap tampilkan UI, tapi disable save kalau user Telegram belum ada
   const canSave = !!user?.id;
 
-  const shownName = user?.first_name || saved.name || "Unknown";
-  const shownUsername = user?.username || saved.username || "unknown";
-  const shownId = user?.id || saved.telegramId || "-";
+  const shownName = user?.first_name || "Unknown";
+  const shownUsername = user?.username || "unknown";
+  const shownId = user?.id || "-";
 
   contentArea.innerHTML = `
     <div class="profile-wrap">
@@ -140,9 +167,11 @@ function renderProfilePage() {
             </div>
           </div>
 
-          <button class="btn" id="saveProfileBtn" ${canSave ? "" : "disabled"}>${canSave ? "Save Profile" : "Waiting Telegram Data..."}</button>
+          <button class="btn" id="saveProfileBtn" ${canSave ? "" : "disabled"}>
+            ${canSave ? "Save Profile" : "Waiting Telegram Data..."}
+          </button>
           <p class="hint" id="saveHint">
-            ${canSave ? "Siap disimpan." : "Data Telegram belum terdeteksi. Buka dari tombol menu bot (WebApp button), bukan link preview/cache."}
+            ${canSave ? "Siap disimpan." : "Data Telegram belum terdeteksi."}
           </p>
         </div>
       </section>
@@ -164,11 +193,9 @@ function renderProfilePage() {
       updatedAt: new Date().toISOString(),
     };
 
-    // simpan cache terakhir + per-user key
     localStorage.setItem("profileData:last", JSON.stringify(payload));
     localStorage.setItem(`profileData:${payload.telegramId}`, JSON.stringify(payload));
 
-    // aktifkan kalau endpoint backend siap:
     // await saveProfileToDatabase(payload);
 
     const hint = document.getElementById("saveHint");
