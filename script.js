@@ -9,18 +9,61 @@ const pageCopy = {
   profile: { title: "Profile", desc: "Lengkapi data payout akun." },
 };
 
-function getTelegramUserStrict() {
+(function initTelegramWebApp() {
+  if (window.Telegram?.WebApp) {
+    try {
+      window.Telegram.WebApp.ready();
+      window.Telegram.WebApp.expand();
+    } catch (_) {}
+  }
+})();
+
+function parseInitDataRaw(initData = "") {
+  // parse query-string style "user=%7B...%7D&..."
+  const params = new URLSearchParams(initData);
+  const userRaw = params.get("user");
+  if (!userRaw) return null;
+  try {
+    const u = JSON.parse(userRaw);
+    return {
+      id: u?.id ? String(u.id) : "",
+      first_name: u?.first_name || "",
+      username: u?.username || "",
+    };
+  } catch {
+    return null;
+  }
+}
+
+function getTelegramUser() {
   const tg = window.Telegram?.WebApp;
-  const u = tg?.initDataUnsafe?.user;
+  if (!tg) return null;
 
-  // Wajib data asli Telegram
-  if (!tg || !u || !u.id) return null;
+  // 1) paling umum
+  const u1 = tg.initDataUnsafe?.user;
+  if (u1?.id) {
+    return {
+      id: String(u1.id),
+      first_name: u1.first_name || "",
+      username: u1.username || "",
+    };
+  }
 
-  return {
-    id: String(u.id || ""),
-    first_name: u.first_name || "",
-    username: u.username || "",
-  };
+  // 2) parse dari initData raw
+  const u2 = parseInitDataRaw(tg.initData || "");
+  if (u2?.id) return u2;
+
+  // 3) kadang ada di unsafe object lain (defensive)
+  const maybeUser = tg?.unsafeData?.user || tg?.WebAppUser;
+  if (maybeUser?.id) {
+    return {
+      id: String(maybeUser.id),
+      first_name: maybeUser.first_name || "",
+      username: maybeUser.username || "",
+    };
+  }
+
+  return null;
 }
 
 function renderDefaultPage(tabKey) {
@@ -33,41 +76,30 @@ function getInitial(name = "") {
 }
 
 function renderProfilePage() {
-  const user = getTelegramUserStrict();
+  const user = getTelegramUser();
+  const saved = JSON.parse(localStorage.getItem("profileData:last") || "{}");
 
-  // Kalau bukan dibuka dari Telegram Mini App, tampilkan warning
-  if (!user) {
-    contentArea.innerHTML = `
-      <div class="section-card">
-        <div class="section-head">
-          <div>
-            <div class="section-title">Telegram Data Not Found</div>
-            <div class="section-sub">Buka app ini dari Telegram Mini App untuk memuat data asli user.</div>
-          </div>
-        </div>
-        <p class="hint">Status: fallback dimatikan. Tidak pakai data dummy.</p>
-      </div>
-    `;
-    return;
-  }
+  // tetap tampilkan UI, tapi disable save kalau user Telegram belum ada
+  const canSave = !!user?.id;
 
-  const storageKey = `profileData:${user.id}`;
-  const saved = JSON.parse(localStorage.getItem(storageKey) || "{}");
+  const shownName = user?.first_name || saved.name || "Unknown";
+  const shownUsername = user?.username || saved.username || "unknown";
+  const shownId = user?.id || saved.telegramId || "-";
 
   contentArea.innerHTML = `
     <div class="profile-wrap">
       <section class="profile-hero">
         <div class="hero-top">
-          <div class="avatar">${getInitial(user.first_name)}</div>
+          <div class="avatar">${getInitial(shownName)}</div>
           <div>
-            <div class="hero-name">${escapeHtml(user.first_name || "User")}</div>
-            <div class="hero-user">@${escapeHtml(user.username || "no_username")}</div>
+            <div class="hero-name">${escapeHtml(shownName)}</div>
+            <div class="hero-user">@${escapeHtml(shownUsername)}</div>
           </div>
         </div>
 
         <div class="stat-grid">
           <div class="stat">
-            <div class="v">${escapeHtml(String(user.id || "-"))}</div>
+            <div class="v">${escapeHtml(String(shownId))}</div>
             <div class="k">Telegram ID</div>
           </div>
           <div class="stat">
@@ -108,41 +140,46 @@ function renderProfilePage() {
             </div>
           </div>
 
-          <button class="btn" id="saveProfileBtn">Save Profile</button>
-          <p class="hint" id="saveHint">Belum disimpan.</p>
+          <button class="btn" id="saveProfileBtn" ${canSave ? "" : "disabled"}>${canSave ? "Save Profile" : "Waiting Telegram Data..."}</button>
+          <p class="hint" id="saveHint">
+            ${canSave ? "Siap disimpan." : "Data Telegram belum terdeteksi. Buka dari tombol menu bot (WebApp button), bukan link preview/cache."}
+          </p>
         </div>
       </section>
     </div>
   `;
 
-  document.getElementById("saveProfileBtn").addEventListener("click", async () => {
+  const saveBtn = document.getElementById("saveProfileBtn");
+  saveBtn?.addEventListener("click", async () => {
+    const currentUser = getTelegramUser();
+    if (!currentUser?.id) return;
+
     const payload = {
-      telegramId: String(user.id || ""),
-      name: user.first_name || "",
-      username: user.username || "",
+      telegramId: String(currentUser.id),
+      name: currentUser.first_name || "",
+      username: currentUser.username || "",
       walletAddress: document.getElementById("walletAddress").value.trim(),
       ewalletNumber: document.getElementById("ewalletNumber").value.trim(),
       ewalletProvider: document.getElementById("ewalletProvider").value,
       updatedAt: new Date().toISOString(),
     };
 
-    // Simpan per-user (berdasarkan telegramId asli)
-    localStorage.setItem(storageKey, JSON.stringify(payload));
+    // simpan cache terakhir + per-user key
+    localStorage.setItem("profileData:last", JSON.stringify(payload));
+    localStorage.setItem(`profileData:${payload.telegramId}`, JSON.stringify(payload));
 
-    // Aktifkan kalau endpoint backend kamu sudah jadi:
+    // aktifkan kalau endpoint backend siap:
     // await saveProfileToDatabase(payload);
 
     const hint = document.getElementById("saveHint");
-    hint.textContent = "Profile tersimpan ✅ (Telegram data aktif)";
+    hint.textContent = "Profile tersimpan ✅";
     hint.classList.add("ok");
   });
 }
 
 function renderProviderOptions(selected = "") {
   const providers = ["DANA", "OVO", "GoPay", "ShopeePay", "LinkAja", "SeaBank", "Bank Transfer"];
-  return providers
-    .map((p) => `<option value="${p}" ${selected === p ? "selected" : ""}>${p}</option>`)
-    .join("");
+  return providers.map((p) => `<option value="${p}" ${selected === p ? "selected" : ""}>${p}</option>`).join("");
 }
 
 async function saveProfileToDatabase(payload) {
