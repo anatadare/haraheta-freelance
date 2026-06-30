@@ -228,44 +228,33 @@ function renderProfilePage() {
   });
 }
 
-/* FX helpers */
-async function fetchFrankfurterRate() {
-  const res = await fetch("https://api.frankfurter.app/latest?base=IDR&symbols=USD", { method: "GET" });
-  if (!res.ok) throw new Error("Frankfurter fetch failed");
-  const data = await res.json();
-  const rate = Number(data?.rates?.USD || 0);
-  if (!rate) throw new Error("Frankfurter invalid rate");
-  return rate;
-}
-
-async function fetchExchangeHostRate() {
-  const res = await fetch("https://api.exchangerate.host/convert?from=IDR&to=USD&amount=1", { method: "GET" });
-  if (!res.ok) throw new Error("ExchangeHost fetch failed");
-  const data = await res.json();
-  const rate = Number(data?.result || 0);
-  if (!rate) throw new Error("ExchangeHost invalid rate");
-  return rate;
-}
+/* API-only FX (Frankfurter) */
+const FX_CACHE_KEY = "fx:IDRUSD";
+const FX_CACHE_TTL_MS = 30 * 60 * 1000;
 
 async function getLiveUsdPerIdr() {
-  const cacheKey = "fx:IDRUSD";
-  const cacheRaw = localStorage.getItem(cacheKey);
-  if (cacheRaw) {
+  // pakai cache dulu
+  const raw = localStorage.getItem(FX_CACHE_KEY);
+  if (raw) {
     try {
-      const c = JSON.parse(cacheRaw);
+      const c = JSON.parse(raw);
       const age = Date.now() - (c.ts || 0);
-      if (c.rate && age < 30 * 60 * 1000) return c.rate; // 30 min cache
+      if (c.rate && age < FX_CACHE_TTL_MS) return c.rate;
     } catch {}
   }
 
-  let rate = 0;
-  try {
-    rate = await fetchFrankfurterRate();
-  } catch {
-    rate = await fetchExchangeHostRate(); // fallback
-  }
+  // hit API Frankfurter
+  const res = await fetch("https://api.frankfurter.app/latest?base=IDR&symbols=USD", {
+    method: "GET",
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error("FX fetch failed");
 
-  localStorage.setItem(cacheKey, JSON.stringify({ rate, ts: Date.now() }));
+  const data = await res.json();
+  const rate = Number(data?.rates?.USD || 0); // 1 IDR = ? USD
+  if (!rate) throw new Error("Invalid FX rate");
+
+  localStorage.setItem(FX_CACHE_KEY, JSON.stringify({ rate, ts: Date.now() }));
   return rate;
 }
 
@@ -350,13 +339,6 @@ function renderWalletPage() {
       const usdPerIdr = await getLiveUsdPerIdr();
       usdEl.textContent = formatUSDFromIDR(balance, usdPerIdr);
     } catch {
-      try {
-        const c = JSON.parse(localStorage.getItem("fx:IDRUSD") || "null");
-        if (c?.rate) {
-          usdEl.textContent = `${formatUSDFromIDR(balance, c.rate)} (cached)`;
-          return;
-        }
-      } catch {}
       usdEl.textContent = "USD unavailable";
     }
   })();
